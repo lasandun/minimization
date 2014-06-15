@@ -6,10 +6,13 @@ module Minimization
     attr_accessor :max_iterations
     attr_accessor :max_evaluations
     attr_accessor :max_brent_iterations
+    attr_accessor :x_minimum
+    attr_accessor :f_minimum
+    attr_reader   :converging
 
     Max_Iterations_Default      = 100
     Max_Evaluations_Default     = 100
-    MAX_BRENT_ITERATION_DEFAULT = 100
+    MAX_BRENT_ITERATION_DEFAULT = 10   # give a suitable value
 
     def initialize(f, initial_guess, lower_bound, upper_bound)
       @iterations           = 0
@@ -17,6 +20,7 @@ module Minimization
       @evaluations          = 0
       @max_evaluations      = Max_Evaluations_Default
       @max_brent_iterations = MAX_BRENT_ITERATION_DEFAULT
+      @converging           = true
 
       @f                    = f
       @start                = initial_guess
@@ -114,86 +118,85 @@ module Minimization
     end
 
     def minimize
-      guess = @start
-      n     = guess.length
-      direc = Array.new(n) { Array.new(n) {0} } # initialize all to 0
-      0.upto(n - 1) do |i|
-        direc[i][i] = 1
+      @iterations += 1
+
+      if(@iterations <= 1)
+        guess = @start
+        @n     = guess.length
+        @direc = Array.new(@n) { Array.new(@n) {0} } # initialize all to 0
+        0.upto(@n - 1) do |i|
+          @direc[i][i] = 1
+        end
+
+        @x     = guess
+        @f_val = f(@x)
+        @x1    = @x.clone
       end
 
-      x     = guess
-      f_val = f(x)
-      x1    = x.clone
-      iter  = 0
+      fx        = @f_val
+      fx2       = 0
+      delta     = 0
+      big_ind   = 0
+      alpha_min = 0
 
-      loop do
-        iter     += 1
-        fx        = f_val
-        fx2       = 0
-        delta     = 0
-        big_ind   = 0
-        alpha_min = 0
+      0.upto(@n - 1) do |i|
+        direction = @direc[i].clone
+        fx2       = @f_val
+        minimum   = brent_search(@x, direction)
+        @f_val     = minimum[:f_val]
+        alpha_min = minimum[:alpha_min]
+        new_pnd   = new_point_and_direction(@x, direction, alpha_min)
+        new_point = new_pnd[:point]
+        new_dir   = new_pnd[:dir]
+        @x         = new_point
 
-        0.upto(n - 1) do |i|
-          direction = direc[i].clone
-          fx2       = f_val
-          minimum   = brent_search(x, direction)
-          f_val     = minimum[:f_val]
+        if ((fx2 - @f_val) > delta) 
+          delta   = fx2 - @f_val
+          big_ind = i
+        end
+      end
+
+      # convergence check
+      @converging = !(2 * (fx - @f_val) <= (@relative_threshold * (fx.abs + @f_val.abs) + @absolute_threshold))
+
+      # storing results
+      if((@f_val < fx))
+        @x_minimum = @x
+        @f_minimum = @f_val
+      else
+        @x_minimum = @x1
+        @f_minimum = fx
+      end
+
+      direction  = Array.new(@n)
+      x2         = Array.new(@n)
+      0.upto(@n -1) do |i|
+        direction[i]  = @x[i] - @x1[i]
+        x2[i]         = 2 * @x[i] - @x1[i]
+      end
+
+      @x1  = @x.clone
+      fx2 = f(x2)
+
+      if (fx > fx2)
+        t    = 2 * (fx + fx2 - 2 * @f_val)
+        temp = fx - @f_val - delta
+        t   *= temp * temp
+        temp = fx - fx2
+        t   -= delta * temp * temp
+
+        if (t < 0.0)
+          minimum   = brent_search(@x, direction)
+          @f_val     = minimum[:f_val]
           alpha_min = minimum[:alpha_min]
-          new_pnd   = new_point_and_direction(x, direction, alpha_min)
+          new_pnd   = new_point_and_direction(@x, direction, alpha_min)
           new_point = new_pnd[:point]
           new_dir   = new_pnd[:dir]
-          x         = new_point
+          @x         = new_point
 
-          if ((fx2 - f_val) > delta) 
-            delta   = fx2 - f_val
-            big_ind = i
-          end
-        end
-
-        # convergence check
-        stop = (2 * (fx - f_val) <= (@relative_threshold * (fx.abs + f_val.abs) + @absolute_threshold))
-
-        previous = PointValuePair.new(x1, fx)
-        current  = PointValuePair.new(x, f_val)
-        if (stop)
-          if((f_val < fx))
-            return current
-          else
-            return previous
-          end
-        end
-
-        direction  = Array.new(n)
-        x2         = Array.new(n)
-        0.upto(n -1) do |i|
-          direction[i]  = x[i] - x1[i]
-          x2[i]         = 2 * x[i] - x1[i]
-        end
-
-        x1  = x.clone
-        fx2 = f(x2)
-
-        if (fx > fx2)
-          t    = 2 * (fx + fx2 - 2 * f_val)
-          temp = fx - f_val - delta
-          t   *= temp * temp
-          temp = fx - fx2
-          t   -= delta * temp * temp
-
-          if (t < 0.0)
-            minimum   = brent_search(x, direction)
-            f_val     = minimum[:f_val]
-            alpha_min = minimum[:alpha_min]
-            new_pnd   = new_point_and_direction(x, direction, alpha_min)
-            new_point = new_pnd[:point]
-            new_dir   = new_pnd[:dir]
-            x         = new_point
-
-            last_ind        = n - 1
-            direc[big_ind]  = direc[last_ind]
-            direc[last_ind] = new_dir
-          end
+          last_ind        = @n - 1
+          @direc[big_ind]  = @direc[last_ind]
+          @direc[last_ind] = new_dir
         end
       end
     end
@@ -204,6 +207,10 @@ end
 f = proc{ |x| (x[0] - 1)**2 + (2*x[1] - 5)**2 + (x[2]-3.3)**2}
 x = Minimization::PowellMinimizer.new(f, [1, 2, 3], [0, 0, 0], [5, 5, 5])
 
-puts x.minimize.point.inspect
+while(x.converging)
+  x.minimize
+  puts "#{x.x_minimum}     #{x.f_minimum}"
+end
+
 
 
