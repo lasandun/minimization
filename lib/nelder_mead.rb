@@ -22,7 +22,7 @@
 #
 # Nelder Mead Algorithm for Multidimensional minimization
 
-require "./point_value_pair.rb"
+require "#{File.dirname(__FILE__)}/point_value_pair.rb"
 
 module Minimization
 
@@ -305,9 +305,9 @@ module Minimization
   end
 end
 
-f = proc {|x| (x[0] - 20)**2 + (x[1] - 30)**2}
-min = Minimization::NelderMead.new(f,[1, 2])
-until(min.converged)
-  min.iterate
-end
-puts "results :  #{min.x_minimum}     #{min.f_minimum}"
+#f = proc {|x| (x[0] - 20)**2 + (x[1] - 30)**2}
+#min = Minimization::NelderMead.new(f,[1, 2])
+#until(min.converged)
+#  min.iterate
+#end
+#puts "results :  #{min.x_minimum}     #{min.f_minimum}"

@@ -22,8 +22,8 @@
 # files. Therefore this file is under Apache License Version 2.
 #
 # Powell's Algorithm for Multidimensional minimization
-require "./point_value_pair.rb"
-require "./minimization.rb"
+require "#{File.dirname(__FILE__)}/point_value_pair.rb"
+require "#{File.dirname(__FILE__)}/minimization.rb"
 
 module Minimization
   class ConjugateDirectionMinimizer
@@ -289,13 +289,10 @@ module Minimization
   end
 end
 
-f = proc{ |x| (x[0] - 1)**2 + (2*x[1] - 5)**2 + (x[2]-3.3)**2}
-x = Minimization::PowellMinimizer.new(f, [1, 2, 3], [0, 0, 0], [5, 5, 5])
-
-while(x.converging)
-  x.minimize
-  puts "#{x.x_minimum}     #{x.f_minimum}"
-end
-
-
-
+#f = proc{ |x| (x[0] - 1)**2 + (2*x[1] - 5)**2 + (x[2]-3.3)**2}
+#x = Minimization::PowellMinimizer.new(f, [1, 2, 3], [0, 0, 0], [5, 5, 5])
+#
+#while(x.converging)
+#  x.minimize
+#  puts "#{x.x_minimum}     #{x.f_minimum}"
+#end
