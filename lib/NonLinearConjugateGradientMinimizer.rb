@@ -9,6 +9,8 @@ module Minimization
     MAX_ITERATIONS_DEFAULT  = 100000
     
     def initialize(f, fd, start_point, beta_formula)
+      @epsilon = 10e-5
+      @safe_min = 4.503599e15
       @f = f
       @fd = fd
       @start_point = start_point
@@ -17,6 +19,8 @@ module Minimization
       @max_evaluations = MAX_EVALUATIONS_DEFAULT
       @iterations = 0
       @update_formula = beta_formula
+      @relative_threshold = 100 * @epsilon
+      @absolute_threshold = 100 * @safe_min
     end
 
     def f(x)
@@ -55,15 +59,20 @@ module Minimization
     end
 
     def precondition(point, r)
-
+      return r.clone # case: identity preconditioner
     end
 
     def converged(previous, current)
-
+      p = f(previous)
+      c = f(current)
+      difference = (p - c).abs
+      size = [p.abs, c.abs].max
+      return ((difference <= size * @relative_threshold) || (difference <= @absolute_threshold))
     end
 
+    # solver to use during line search
     def solve(a, b, c)
-
+      
     end
 
     def value(x)
@@ -74,7 +83,7 @@ module Minimization
       end
 
       # gradient of the objective function
-      gradient = computeObjectiveGradient(shiftedPoint)
+      gradient = gradient(shiftedPoint)
 
       # dot product with the search direction
       dot_product = 0
