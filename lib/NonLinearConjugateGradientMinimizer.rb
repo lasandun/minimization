@@ -42,13 +42,13 @@ module Minimization
     end
 
     def find_upper_bound(a, h)
-      ya = value(a)
+      ya = line_search(a)
       yb = ya
       step = h
       # check step value for float max value exceeds
       while step < Float::MAX
         b  = a + step
-        yB = value(b)
+        yB = line_search(b)
         if (ya * yB <= 0)
           return b
         end
@@ -67,23 +67,24 @@ module Minimization
       c = f(current)
       difference = (p - c).abs
       size = [p.abs, c.abs].max
-      return ((difference <= size * @relative_threshold) || (difference <= @absolute_threshold))
+      return ((difference <= size * @relative_threshold) or (difference <= @absolute_threshold))
     end
 
     # solver to use during line search
-    def solve(a, b, c)
+    def solve(min, max, start_value)
+      
       
     end
 
-    def value(x)
+    def line_search(x)
       # current point in the search direction
-      shifted_point = @point.clone()
+      shifted_point = @point.clone
       0.upto(shifted_point.length - 1) do |i|
-        shifted_point[i] += x * @search_direction[i];
+        shifted_point[i] += x * @search_direction[i]
       end
 
       # gradient of the objective function
-      gradient = gradient(shiftedPoint)
+      gradient = gradient(shifted_point)
 
       # dot product with the search direction
       dot_product = 0
@@ -124,8 +125,8 @@ module Minimization
           return current
         end
 
-        uB = find_upper_bound(0, @initial_step)
-        step = solve(0, uB, 1e-15)
+        ub = find_upper_bound(0, @initial_step)
+        step = solve(0, ub, 1e-15)
 
         # Validate new point
         0.upto(@point.length - 1) do |i|
@@ -159,7 +160,7 @@ module Minimization
         steepest_descent = new_steepest_descent
 
         # Compute conjugate search direction
-        if (@iterations % n == 0 || beta < 0)
+        if (@iterations % n == 0 or beta < 0)
           # Break conjugation: reset search direction
           @search_direction = steepest_descent.clone
         else
@@ -176,3 +177,8 @@ module Minimization
   end
 
 end
+
+f = proc{|x| (x[0] - 1)**2 + (x[1] - 2)**2}
+fd = proc{|x| x}
+min = Minimization::NonLinearConjugateGradientMinimizer.new(f, fd, [0, 0], :fletcher_reeves)
+min.minimize
