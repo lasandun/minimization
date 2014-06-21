@@ -4,7 +4,7 @@ module Minimization
 
     EPSILON = 10e-6
 
-    def brent(lo, hi, f)
+    def find_root(lo, hi, f)
       a  = lo
       fa = f.call(lo)
       b  = hi

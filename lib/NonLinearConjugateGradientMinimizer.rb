@@ -1,5 +1,6 @@
 require "#{File.dirname(__FILE__)}/point_value_pair.rb"
 require "#{File.dirname(__FILE__)}/minimization.rb"
+require "#{File.dirname(__FILE__)}/brent_root_finder.rb"
 
 module Minimization
 
@@ -72,8 +73,11 @@ module Minimization
 
     # solver to use during line search
     def solve(min, max, start_value)
-      
-      
+      # check start_value to eliminate unnessasary calculations ...
+      func        = proc{|x| line_search(x)}
+      root_finder = Minimization::BrentRootFinder.new
+      root        = root_finder.find_root(min, max, func)
+      return root
     end
 
     def line_search(x)
@@ -125,8 +129,10 @@ module Minimization
           return current
         end
 
-        ub = find_upper_bound(0, @initial_step)
-        step = solve(0, ub, 1e-15)
+        # set @search_direction to be used in solve and find_upper_bound methods
+        #@search_direction = 
+        ub                = find_upper_bound(0, @initial_step)
+        step              = solve(0, ub, 1e-15)
 
         # Validate new point
         0.upto(@point.length - 1) do |i|
