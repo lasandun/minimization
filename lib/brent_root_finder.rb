@@ -1,5 +1,7 @@
 module Minimization
+
   class BrentRootFinder
+
     EPSILON = 10e-6
 
     def brent(lo, hi, f)
@@ -81,6 +83,6 @@ module Minimization
   end
 end
 
-root = Minimization::BrentRootFinder.new
-func = proc{|x| (x-3)**2}
-puts root.brent(0, 5, func)
+#root = Minimization::BrentRootFinder.new
+#func = proc{|x| (x-3)**2}
+#puts root.brent(0, 5, func)
