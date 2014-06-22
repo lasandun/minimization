@@ -10,10 +10,10 @@ module Minimization
     MAX_ITERATIONS_DEFAULT  = 100000
     
     def initialize(f, fd, start_point, beta_formula)
-      @epsilon = 10e-5
-      @safe_min = 4.503599e15
-      @f = f
-      @fd = fd
+      @epsilon     = 10e-5
+      @safe_min    = 4.503599e15
+      @f           = f
+      @fd          = fd
       @start_point = start_point
 
       @max_iterations = MAX_ITERATIONS_DEFAULT
@@ -22,6 +22,13 @@ module Minimization
       @update_formula = beta_formula
       @relative_threshold = 100 * @epsilon
       @absolute_threshold = 100 * @safe_min
+
+      #if (initial_step <= 0) 
+      #  @initial_step = 1.0
+      #else
+      #  @initial_step = initial_step 
+      #end
+      @initial_step = 1.0
     end
 
     def f(x)
@@ -34,13 +41,13 @@ module Minimization
       return @fd.call(x)
     end
 
-    def set_initial_step(initial_step)
-      if (initial_step <= 0) 
-        @initial_step = 1.0
-      else
-        @initial_step = initial_step 
-      end
-    end
+    #def set_initial_step(initial_step)
+    #  if (initial_step <= 0) 
+    #    @initial_step = 1.0
+    #  else
+    #    @initial_step = initial_step 
+    #  end
+    #end
 
     def find_upper_bound(a, h)
       ya = line_search(a)
@@ -75,7 +82,7 @@ module Minimization
     def solve(min, max, start_value)
       # check start_value to eliminate unnessasary calculations ...
       func        = proc{|x| line_search(x)}
-      root_finder = Minimization::BrentRootFinder.new
+      root_finder = Minimization::BrentRootFinder.new(func)
       root        = root_finder.find_root(min, max, func)
       return root
     end
@@ -110,7 +117,7 @@ module Minimization
 
       # Initial search direction.
       steepest_descent = precondition(@point, r)
-      search_direction = steepest_descent.clone
+      @search_direction = steepest_descent.clone
 
       delta = 0
       0.upto(n - 1) do |i|
@@ -124,7 +131,7 @@ module Minimization
         objective = f(@point)
         previous = current
         current = Minimization::PointValuePair.new(@point, objective)
-        if (previous != nil and converged(previous, current))
+        if (previous != nil and converged(previous.point, current.point))
           # We have found an minimum
           return current
         end
@@ -136,17 +143,17 @@ module Minimization
 
         # Validate new point
         0.upto(@point.length - 1) do |i|
-          point[i] += step * @search_direction[i]
+          @point[i] += step * @search_direction[i]
         end
 
-        r = gradient(point)
+        r = gradient(@point)
         0.upto(n - 1) do |i|
           r[i] = -r[i]
         end
 
         # Compute beta
         delta_old = delta
-        new_steepest_descent = precondition(point, r)
+        new_steepest_descent = precondition(@point, r)
         delta = 0
         0.upto(n - 1) do |i|
           delta += r[i] * new_steepest_descent[i]
@@ -187,4 +194,5 @@ end
 f = proc{|x| (x[0] - 1)**2 + (x[1] - 2)**2}
 fd = proc{|x| x}
 min = Minimization::NonLinearConjugateGradientMinimizer.new(f, fd, [0, 0], :fletcher_reeves)
-min.minimize
+puts min.minimize.inspect
+
