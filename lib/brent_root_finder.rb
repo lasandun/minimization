@@ -2,9 +2,19 @@ module Minimization
 
   class BrentRootFinder
 
-    EPSILON = 10e-6
+    attr_accessor :max_iterations
+
+    MAX_ITERATIONS_DEFAULT = 10000
+    EPSILON                = 10e-10
+
+    def initialize(max_iterations)
+      if (max_iterations.nil?)
+        @max_iterations = MAX_ITERATIONS_DEFAULT
+      end
+    end
 
     def find_root(lo, hi, f)
+      @iterations = 0
       a  = lo
       fa = f.call(lo)
       b  = hi
@@ -18,6 +28,7 @@ module Minimization
       eps = EPSILON # Relative Accuracy
 
       loop do
+        @iterations += 1
         if (fc.abs < fb.abs)
           a  = b
           b  = c
@@ -31,6 +42,9 @@ module Minimization
         m   = 0.5 * (c - b)
 
         if (m.abs <= tol or fb.abs < EPSILON)
+          return b
+        end
+        if(@iterations > @max_iterations)
           return b
         end
         if (e.abs < tol or fa.abs <= fb.abs)
@@ -80,9 +94,11 @@ module Minimization
         end
       end
     end
+
   end
+
 end
 
-#root = Minimization::BrentRootFinder.new
-#func = proc{|x| (x-3)**2}
-#puts root.brent(0, 5, func)
+#root = Minimization::BrentRootFinder.new(nil)
+#func = proc{|x| (x-3.5872)**2}
+#puts root.find_root(0, 5, func)
