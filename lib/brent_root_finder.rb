@@ -8,13 +8,13 @@ module Minimization
     EPSILON                = 10e-10
 
     def initialize(max_iterations)
-      if (max_iterations.nil?)
+      @iterations = 0
+      if (@max_iterations.nil?)
         @max_iterations = MAX_ITERATIONS_DEFAULT
       end
     end
 
     def find_root(lo, hi, f)
-      @iterations = 0
       a  = lo
       fa = f.call(lo)
       b  = hi
