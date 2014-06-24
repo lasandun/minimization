@@ -8,6 +8,10 @@ module Minimization
 
     MAX_EVALUATIONS_DEFAULT = 100000
     MAX_ITERATIONS_DEFAULT  = 100000
+
+    def show(x)
+      puts x.inspect
+    end
     
     def initialize(f, fd, start_point, beta_formula)
       @epsilon     = 10e-5
@@ -49,15 +53,15 @@ module Minimization
     #  end
     #end
 
-    def find_upper_bound(a, h)
-      ya = line_search(a)
+    def find_upper_bound(a, h, search_direction)
+      ya = line_search_func(a, search_direction)
       yb = ya
       step = h
       # check step value for float max value exceeds
       while step < Float::MAX
-        b  = a + step
-        yB = line_search(b)
-        if (ya * yB <= 0)
+        b = a + step
+        yb = line_search_func(b, search_direction)
+        if (ya * yb <= 0)
           return b
         end
         step *= [2, ya / yb].max
@@ -79,19 +83,19 @@ module Minimization
     end
 
     # solver to use during line search
-    def solve(min, max, start_value)
+    def solve(min, max, start_value, search_direction)
       # check start_value to eliminate unnessasary calculations ...
-      func        = proc{|x| line_search(x)}
+      func        = proc{|x| line_search_func(x, search_direction)}
       root_finder = Minimization::BrentRootFinder.new(func)
       root        = root_finder.find_root(min, max, func)
       return root
     end
 
-    def line_search(x)
+    def line_search_func(x, search_direction)
       # current point in the search direction
       shifted_point = @point.clone
       0.upto(shifted_point.length - 1) do |i|
-        shifted_point[i] += x * @search_direction[i]
+        shifted_point[i] += x * search_direction[i]
       end
 
       # gradient of the objective function
@@ -100,7 +104,7 @@ module Minimization
       # dot product with the search direction
       dot_product = 0
       0.upto(gradient.length - 1) do |i|
-        dot_product += gradient[i] * @search_direction[i]
+        dot_product += gradient[i] * search_direction[i]
       end
 
       return dot_product
@@ -110,40 +114,42 @@ module Minimization
       @point = @start_point.clone
       n = @point.length
       r = gradient(@point)
-      # if (goal == GoalType.MINIMIZE) {
       0.upto(n - 1) do |i|
         r[i] = -r[i]
       end
+      
+      show(r)
 
       # Initial search direction.
       steepest_descent = precondition(@point, r)
-      @search_direction = steepest_descent.clone
+      search_direction = steepest_descent.clone
 
       delta = 0
       0.upto(n - 1) do |i|
-          delta += r[i] * @search_direction[i]
+          delta += r[i] * search_direction[i]
       end
 
       current = nil
 
       loop do
         @iterations += 1
-        objective = f(@point)
+        #objective = f(@point)   # change name
         previous = current
-        current = Minimization::PointValuePair.new(@point, objective)
+        current = Minimization::PointValuePair.new(@point, f(@point))
+        puts current.inspect
         if (previous != nil and converged(previous.point, current.point))
           # We have found an minimum
           return current
         end
 
-        # set @search_direction to be used in solve and find_upper_bound methods
-        #@search_direction = 
-        ub                = find_upper_bound(0, @initial_step)
-        step              = solve(0, ub, 1e-15)
+        # set search_direction to be used in solve and find_upper_bound methods
+        #search_direction = 
+        ub                = find_upper_bound(0, @initial_step, search_direction)
+        step              = solve(0, ub, 1e-15, search_direction)
 
         # Validate new point
         0.upto(@point.length - 1) do |i|
-          @point[i] += step * @search_direction[i]
+          @point[i] += step * search_direction[i]
         end
 
         r = gradient(@point)
@@ -173,13 +179,13 @@ module Minimization
         steepest_descent = new_steepest_descent
 
         # Compute conjugate search direction
-        if (@iterations % n == 0 or beta < 0)
+        if ((@iterations % n == 0) or (beta < 0))
           # Break conjugation: reset search direction
-          @search_direction = steepest_descent.clone
+          search_direction = steepest_descent.clone
         else
           # Compute new conjugate search direction
           0.upto(n - 1) do |i|
-            @search_direction[i] = steepest_descent[i] + beta * @search_direction[i]
+            search_direction[i] = steepest_descent[i] + beta * search_direction[i]
           end
         end
 
@@ -192,7 +198,12 @@ module Minimization
 end
 
 f = proc{|x| (x[0] - 1)**2 + (x[1] - 2)**2}
-fd = proc{|x| x}
+fd = proc{|x| [2*(x[0] - 1) , 2*(x[1] - 2)]}
+#f = proc{|x| (x[0]-1)**2}
+#fd = proc{|x|
+#            k = 2*(x[0]-1)
+#            [k]
+#         }
 min = Minimization::NonLinearConjugateGradientMinimizer.new(f, fd, [0, 0], :fletcher_reeves)
 puts min.minimize.inspect
 
