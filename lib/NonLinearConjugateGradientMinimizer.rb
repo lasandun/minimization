@@ -9,10 +9,6 @@ module Minimization
     MAX_EVALUATIONS_DEFAULT = 100000
     MAX_ITERATIONS_DEFAULT  = 100000
 
-    def show(x)
-      puts x.inspect
-    end
-    
     def initialize(f, fd, start_point, beta_formula)
       @epsilon     = 10e-5
       @safe_min    = 4.503599e15
@@ -118,8 +114,6 @@ module Minimization
         r[i] = -r[i]
       end
       
-      show(r)
-
       # Initial search direction.
       steepest_descent = precondition(@point, r)
       search_direction = steepest_descent.clone
@@ -197,13 +191,23 @@ module Minimization
 
 end
 
-f = proc{|x| (x[0] - 1)**2 + (x[1] - 2)**2}
-fd = proc{|x| [2*(x[0] - 1) , 2*(x[1] - 2)]}
-#f = proc{|x| (x[0]-1)**2}
+#f  = proc{|x| (x[0] + x[1] + 5)**2 + 1 }
+#fd = proc{|x| [ (2*(x[0] + x[1] + 5)), 2*(x[0] + x[1] + 5) ] }
+#min = Minimization::NonLinearConjugateGradientMinimizer.new(f, fd, [1, 2], :fletcher_reeves)
+#puts min.minimize.inspect
+
+
+#f  = proc{|x| (x[0]-52)**2}
 #fd = proc{|x|
-#            k = 2*(x[0]-1)
+#            k = 2*(x[0]-52)
 #            [k]
 #         }
-min = Minimization::NonLinearConjugateGradientMinimizer.new(f, fd, [0, 0], :fletcher_reeves)
-puts min.minimize.inspect
+#min = Minimization::NonLinearConjugateGradientMinimizer.new(f, fd, [1], :fletcher_reeves)
+#puts min.minimize.inspect
+
+
+#f  = proc{|x| (x[0] - 154)**2 + (x[1] - 28894)**2}
+#fd = proc{|x| [2*(x[0] - 154) , 2*(x[1] - 28894)]}
+#min = Minimization::NonLinearConjugateGradientMinimizer.new(f, fd, [1, 3], :fletcher_reeves)
+#puts min.minimize.inspect
 
