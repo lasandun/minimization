@@ -16,10 +16,10 @@ module Minimization
       @fd          = fd
       @start_point = start_point
 
-      @max_iterations = MAX_ITERATIONS_DEFAULT
-      @max_evaluations = MAX_EVALUATIONS_DEFAULT
-      @iterations = 0
-      @update_formula = beta_formula
+      @max_iterations     = MAX_ITERATIONS_DEFAULT
+      @max_evaluations    = MAX_EVALUATIONS_DEFAULT
+      @iterations         = 0
+      @update_formula     = beta_formula
       @relative_threshold = 100 * @epsilon
       @absolute_threshold = 100 * @safe_min
 
@@ -41,21 +41,13 @@ module Minimization
       return @fd.call(x)
     end
 
-    #def set_initial_step(initial_step)
-    #  if (initial_step <= 0) 
-    #    @initial_step = 1.0
-    #  else
-    #    @initial_step = initial_step 
-    #  end
-    #end
-
     def find_upper_bound(a, h, search_direction)
-      ya = line_search_func(a, search_direction)
-      yb = ya
+      ya   = line_search_func(a, search_direction)
+      yb   = ya
       step = h
       # check step value for float max value exceeds
       while step < Float::MAX
-        b = a + step
+        b  = a + step
         yb = line_search_func(b, search_direction)
         if (ya * yb <= 0)
           return b
@@ -71,10 +63,10 @@ module Minimization
     end
 
     def converged(previous, current)
-      p = f(previous)
-      c = f(current)
+      p          = f(previous)
+      c          = f(current)
       difference = (p - c).abs
-      size = [p.abs, c.abs].max
+      size       = [p.abs, c.abs].max
       return ((difference <= size * @relative_threshold) or (difference <= @absolute_threshold))
     end
 
@@ -108,8 +100,8 @@ module Minimization
     
     def minimize
       @point = @start_point.clone
-      n = @point.length
-      r = gradient(@point)
+      n      = @point.length
+      r      = gradient(@point)
       0.upto(n - 1) do |i|
         r[i] = -r[i]
       end
@@ -127,19 +119,16 @@ module Minimization
 
       loop do
         @iterations += 1
-        #objective = f(@point)   # change name
-        previous = current
-        current = Minimization::PointValuePair.new(@point, f(@point))
-        puts current.inspect
+        previous     = current
+        current      = Minimization::PointValuePair.new(@point, f(@point))
         if (previous != nil and converged(previous.point, current.point))
-          # We have found an minimum
+          # minimum has been found
           return current
         end
 
         # set search_direction to be used in solve and find_upper_bound methods
-        #search_direction = 
-        ub                = find_upper_bound(0, @initial_step, search_direction)
-        step              = solve(0, ub, 1e-15, search_direction)
+        ub   = find_upper_bound(0, @initial_step, search_direction)
+        step = solve(0, ub, 1e-15, search_direction)
 
         # Validate new point
         0.upto(@point.length - 1) do |i|
@@ -152,9 +141,9 @@ module Minimization
         end
 
         # Compute beta
-        delta_old = delta
+        delta_old            = delta
         new_steepest_descent = precondition(@point, r)
-        delta = 0
+        delta                = 0
         0.upto(n - 1) do |i|
           delta += r[i] * new_steepest_descent[i]
         end
@@ -191,12 +180,13 @@ module Minimization
 
 end
 
+#example 1
 #f  = proc{|x| (x[0] + x[1] + 5)**2 + 1 }
 #fd = proc{|x| [ (2*(x[0] + x[1] + 5)), 2*(x[0] + x[1] + 5) ] }
 #min = Minimization::NonLinearConjugateGradientMinimizer.new(f, fd, [1, 2], :fletcher_reeves)
 #puts min.minimize.inspect
 
-
+#example 2
 #f  = proc{|x| (x[0]-52)**2}
 #fd = proc{|x|
 #            k = 2*(x[0]-52)
@@ -205,9 +195,9 @@ end
 #min = Minimization::NonLinearConjugateGradientMinimizer.new(f, fd, [1], :fletcher_reeves)
 #puts min.minimize.inspect
 
-
-#f  = proc{|x| (x[0] - 154)**2 + (x[1] - 28894)**2}
-#fd = proc{|x| [2*(x[0] - 154) , 2*(x[1] - 28894)]}
-#min = Minimization::NonLinearConjugateGradientMinimizer.new(f, fd, [1, 3], :fletcher_reeves)
-#puts min.minimize.inspect
+#example 3
+f  = proc{|x| (x[0] - 154)**2 + (x[1] - 28894)**2}
+fd = proc{|x| [2*(x[0] - 154) , 2*(x[1] - 28894)]}
+min = Minimization::NonLinearConjugateGradientMinimizer.new(f, fd, [1, 3], :fletcher_reeves)
+puts min.minimize.inspect
 
