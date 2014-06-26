@@ -6,6 +6,12 @@ module Minimization
 
   class NonLinearConjugateGradientMinimizer
 
+    attr_reader :x_minimum
+    attr_reader :f_minimum
+    attr_reader :converging
+
+    attr_accessor :initial_step
+
     MAX_EVALUATIONS_DEFAULT = 100000
     MAX_ITERATIONS_DEFAULT  = 100000
 
@@ -23,12 +29,26 @@ module Minimization
       @relative_threshold = 100 * @epsilon
       @absolute_threshold = 100 * @safe_min
 
-      #if (initial_step <= 0) 
-      #  @initial_step = 1.0
-      #else
-      #  @initial_step = initial_step 
-      #end
-      @initial_step = 1.0
+      @initial_step = 1.0 # initial step default
+      @converging   = true
+
+      # do initial steps
+      @point = @start_point.clone
+      @n      = @point.length
+      @r      = gradient(@point)
+      0.upto(@n - 1) do |i|
+        @r[i] = -@r[i]
+      end
+      
+      # Initial search direction.
+      @steepest_descent = precondition(@point, @r)
+      @search_direction = @steepest_descent.clone
+
+      @delta = 0
+      0.upto(@n - 1) do |i|
+          @delta += @r[i] * @search_direction[i]
+      end
+      @current = nil
     end
 
     def f(x)
@@ -59,7 +79,7 @@ module Minimization
     end
 
     def precondition(point, r)
-      return r.clone # case: identity preconditioner
+      return r.clone # case: identity preconditioner has been used as the default
     end
 
     def converged(previous, current)
@@ -98,106 +118,63 @@ module Minimization
       return dot_product
     end
     
-    def minimize
-      @point = @start_point.clone
-      n      = @point.length
-      r      = gradient(@point)
-      0.upto(n - 1) do |i|
-        r[i] = -r[i]
-      end
-      
-      # Initial search direction.
-      steepest_descent = precondition(@point, r)
-      search_direction = steepest_descent.clone
+    def iterate
+      @iterations  += 1
+      @previous     = @current
+      @current      = Minimization::PointValuePair.new(@point, f(@point))
+      # set converging parameter
+      @converging   = !(@previous != nil and converged(@previous.point, @current.point))
+      # set results
+      @x_minimum    = @current.point
+      @f_minimum    = @current.value
 
-      delta = 0
-      0.upto(n - 1) do |i|
-          delta += r[i] * search_direction[i]
-      end
+      # set search_direction to be used in solve and find_upper_bound methods
+      ub   = find_upper_bound(0, @initial_step, @search_direction)
+      step = solve(0, ub, 1e-15, @search_direction)
 
-      current = nil
-
-      loop do
-        @iterations += 1
-        previous     = current
-        current      = Minimization::PointValuePair.new(@point, f(@point))
-        if (previous != nil and converged(previous.point, current.point))
-          # minimum has been found
-          return current
-        end
-
-        # set search_direction to be used in solve and find_upper_bound methods
-        ub   = find_upper_bound(0, @initial_step, search_direction)
-        step = solve(0, ub, 1e-15, search_direction)
-
-        # Validate new point
-        0.upto(@point.length - 1) do |i|
-          @point[i] += step * search_direction[i]
-        end
-
-        r = gradient(@point)
-        0.upto(n - 1) do |i|
-          r[i] = -r[i]
-        end
-
-        # Compute beta
-        delta_old            = delta
-        new_steepest_descent = precondition(@point, r)
-        delta                = 0
-        0.upto(n - 1) do |i|
-          delta += r[i] * new_steepest_descent[i]
-        end
-
-        if (@update_formula == :fletcher_reeves)
-          beta = delta / delta_old
-        elsif(@update_formula == :polak_ribiere)
-          deltaMid = 0
-          0.upto(r.length - 1) do |i|
-            deltaMid += r[i] * steepest_descent[i]
-          end
-          beta = (delta - deltaMid) / delta_old
-        else
-          raise "Unknown beta formula type"
-        end
-        steepest_descent = new_steepest_descent
-
-        # Compute conjugate search direction
-        if ((@iterations % n == 0) or (beta < 0))
-          # Break conjugation: reset search direction
-          search_direction = steepest_descent.clone
-        else
-          # Compute new conjugate search direction
-          0.upto(n - 1) do |i|
-            search_direction[i] = steepest_descent[i] + beta * search_direction[i]
-          end
-        end
-
+      # Validate new point
+      0.upto(@point.length - 1) do |i|
+        @point[i] += step * @search_direction[i]
       end
 
+      @r = gradient(@point)
+      0.upto(@n - 1) do |i|
+        @r[i] = -@r[i]
+      end
+
+      # Compute beta
+      delta_old            = @delta
+      new_steepest_descent = precondition(@point, @r)
+      @delta                = 0
+      0.upto(@n - 1) do |i|
+        @delta += @r[i] * new_steepest_descent[i]
+      end
+
+      if (@update_formula == :fletcher_reeves)
+        beta = @delta / delta_old
+      elsif(@update_formula == :polak_ribiere)
+        deltaMid = 0
+        0.upto(@r.length - 1) do |i|
+          deltaMid += @r[i] * @steepest_descent[i]
+        end
+        beta = (@delta - deltaMid) / delta_old
+      else
+        raise "Unknown beta formula type"
+      end
+      @steepest_descent = new_steepest_descent
+
+      # Compute conjugate search direction
+      if ((@iterations % @n == 0) or (beta < 0))
+        # Break conjugation: reset search direction
+        @search_direction = @steepest_descent.clone
+      else
+        # Compute new conjugate search direction
+        0.upto(@n - 1) do |i|
+          @search_direction[i] = @steepest_descent[i] + beta * @search_direction[i]
+        end
+      end
     end
 
   end
 
 end
-
-#example 1
-#f  = proc{|x| (x[0] + x[1] + 5)**2 + 1 }
-#fd = proc{|x| [ (2*(x[0] + x[1] + 5)), 2*(x[0] + x[1] + 5) ] }
-#min = Minimization::NonLinearConjugateGradientMinimizer.new(f, fd, [1, 2], :fletcher_reeves)
-#puts min.minimize.inspect
-
-#example 2
-#f  = proc{|x| (x[0]-52)**2}
-#fd = proc{|x|
-#            k = 2*(x[0]-52)
-#            [k]
-#         }
-#min = Minimization::NonLinearConjugateGradientMinimizer.new(f, fd, [1], :fletcher_reeves)
-#puts min.minimize.inspect
-
-#example 3
-f  = proc{|x| (x[0] - 154)**2 + (x[1] - 28894)**2}
-fd = proc{|x| [2*(x[0] - 154) , 2*(x[1] - 28894)]}
-min = Minimization::NonLinearConjugateGradientMinimizer.new(f, fd, [1, 3], :fletcher_reeves)
-puts min.minimize.inspect
-
