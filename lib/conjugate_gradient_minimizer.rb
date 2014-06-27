@@ -118,7 +118,7 @@ module Minimization
       return dot_product
     end
     
-    def iterate
+    def minimize
       @iterations  += 1
       @previous     = @current
       @current      = Minimization::PointValuePair.new(@point, f(@point))
