@@ -1,3 +1,5 @@
+// gcc test.c -lOpenCL -I . -lOpenCL
+
 #include <CL/cl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,8 +25,7 @@ void loadKernel(char* filePath) {
     FILE* fp = fopen(filePath, "r");
     if(fp == 0) {
         printf("kernel file not found");
-        free(results);
-        return NULL
+        exit(0);
     }
     source_str  = (char*) malloc(sizeof(char) * MAX_SOURCE_SIZE);
     fread(source_str, 1, MAX_SOURCE_SIZE, fp);
@@ -66,14 +67,14 @@ void setKernelArguments() {
     //ret = clSetKernelArg(kernel, argument_no, sizeof(cl_mem), (void *)&a_obj);    
 }
 
-void executeKernel() {
+void executeKernel(int n) {
     //size_t local_item_size = n;
     global_item_size = n;
     ret = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_item_size, NULL/*&local_item_size*/, 0, NULL, NULL);
 }
 
 void readResults() {
-    ret = clEnqueueReadBuffer(command_queue, result_obj, CL_TRUE, 0, n * sizeof(int), results, 0, NULL, NULL);    
+    //ret = clEnqueueReadBuffer(command_queue, result_obj, CL_TRUE, 0, n * sizeof(int), results, 0, NULL, NULL);    
 }
 
 void clearMemory() {
@@ -81,12 +82,7 @@ void clearMemory() {
     ret = clFinish(command_queue);
     ret = clReleaseKernel(kernel);
     ret = clReleaseProgram(program);
-    ret = clReleaseMemObject(a_obj);
-    ret = clReleaseMemObject(n_obj);
-    ret = clReleaseMemObject(dx_obj);
-    ret = clReleaseMemObject(result_obj);
     ret = clReleaseCommandQueue(command_queue);
     ret = clReleaseContext(context);
-    free(results);
     free(source_str);
 }
