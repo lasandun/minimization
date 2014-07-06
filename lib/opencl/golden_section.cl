@@ -1,27 +1,33 @@
-__kernel void golden(__global const float *n, __global const float *lower, __global const float *expected, 
-                     __global const float *upper, __global const float *epsilon, __global const float *max_iterations,
-                     __global const float *c, __global const float *r,
-                     __global float *x_minimum, __global float *f_minimum, __global int *successful) {
+#define epsilon 1e-5
+#define max_iteration 100
+
+float find_min(float start_point, float upper);
+
+__kernel void minimize(__global const float *a, __global const float *b, __global const float *n, __global float *results) {
  
     // Get the index of the current element to be processed
     int i = get_global_id(0);
  
     // Do the operation
-    if(i > n) return;
-    *successful[i] = 1; // succesful
+    if(i <= n) {
+        results[i] = find_min(*a, *b);// (f((*a) + (*dx) * i) + f((*a) + (*dx) * (i + 1))) * (*dx) / 2;
+    }
+}
 
-    double ax, bx, cx; 
-    double x0, x1, x2, x3;
-    double f1, f2;
+float find_min(float lower, float upper){
+    float ax, bx, cx; 
+    float x0, x1, x2, x3;
+    float f1, f2;
+    float c = (3 - 2.236067) / 2;
+    float r = 1 - c;
 
-    // read inputs of i th job
-    ax = lower[i];
-    bx = expected[i];
-    cx = upper[i];
+    ax = lower;
+    bx = (upper + lower) / 2.0;//expected[i];
+    cx = upper;
 
     x0 = ax;
     x3 = cx;
-    if (fabs(cx - bx) > fabs(bx - ax)) {
+    if(fabs(cx - bx) > fabs(bx - ax)) {
       x1 = bx;
       x2 = bx + c*(cx - bx);
     }
@@ -48,18 +54,19 @@ __kernel void golden(__global const float *n, __global const float *lower, __glo
         f2 = f1;
         f1 = f(x1);
       }
-      k += 1;
+      k++;
     }
     // set results of i th job
     if(f1 < f2) {
-      x_minimum[i] = x1;
-      f_minimum[i] = f1;
-      return;
+      // x_minimum[i] = x1;
+      // f_minimum[i] = f1;
+      return x1;
     }
     else {
-      x_minimum[i] = x2;
-      f_minimum[i] = f2;
-      return;
+      // x_minimum[i] = x2;
+      // f_minimum[i] = f2;
+      return x2;
     }
+
 }
 
