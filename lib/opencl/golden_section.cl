@@ -10,7 +10,7 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
  
     // Do the operation
     if(i <= n) {
-        results[i] = find_min(*a, *b);// (f((*a) + (*dx) * i) + f((*a) + (*dx) * (i + 1))) * (*dx) / 2;
+        results[i] = find_min(*a, *b);
     }
 }
 
@@ -22,7 +22,7 @@ float find_min(float lower, float upper){
     float r = 1 - c;
 
     ax = lower;
-    bx = (upper + lower) / 2.0;//expected[i];
+    bx = (upper + lower) / 2.0;
     cx = upper;
 
     x0 = ax;
