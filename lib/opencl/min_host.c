@@ -4,12 +4,11 @@
 #define MAX_SOURCE_SIZE (0x100000)
 
 
-float util_integrate(float start_point, float end_point, float n, char* f) {
+float* util_integrate(float* start_point, float* end_point, int n, char* f) {
     char* source_str;
     size_t source_size;
     int i = 0;
 
-    //float dx = (b-a) / (n*1.0);
     float *results = (float*) malloc(n * sizeof(float));
 
     FILE* fp = fopen("./golden_section.cl", "r");
@@ -40,14 +39,14 @@ float util_integrate(float start_point, float end_point, float n, char* f) {
     cl_context context = clCreateContext( NULL, 1, &device_id, NULL, NULL, &ret);
     cl_command_queue command_queue = clCreateCommandQueue(context, device_id, 0, &ret);    
 
-    cl_mem start_obj  = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float), NULL, &ret);
-    cl_mem end_obj    = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float), NULL, &ret);
-    cl_mem n_obj  = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float), NULL, &ret);
-    cl_mem result_obj = clCreateBuffer(context, CL_MEM_READ_WRITE, n * sizeof(float), NULL, &ret);
+    cl_mem start_obj  = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
+    cl_mem end_obj    = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
+    cl_mem n_obj      = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)      , NULL, &ret);
+    cl_mem result_obj = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n, NULL, &ret);
 
-    ret = clEnqueueWriteBuffer(command_queue, start_obj, CL_TRUE, 0, sizeof(int), &start_point, 0, NULL, NULL);
-    ret = clEnqueueWriteBuffer(command_queue, end_obj  , CL_TRUE, 0, sizeof(int), &end_point  , 0, NULL, NULL);
-    ret = clEnqueueWriteBuffer(command_queue, n_obj, CL_TRUE, 0, sizeof(int), &n, 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, start_obj, CL_TRUE, 0, sizeof(float) * n, start_point, 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, end_obj  , CL_TRUE, 0, sizeof(float) * n, end_point  , 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, n_obj    , CL_TRUE, 0, sizeof(int)      , &n         , 0, NULL, NULL);
 
     cl_program program = clCreateProgramWithSource(context, 1, (const char **)&source_str, (const size_t *)&source_size, &ret);
     ret = clBuildProgram(program, 1, &device_id, NULL, NULL, NULL);
@@ -55,10 +54,10 @@ float util_integrate(float start_point, float end_point, float n, char* f) {
     cl_kernel kernel = clCreateKernel(program, "minimize", &ret);
 
     // set arguments of kernel
-    ret = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&start_obj);    
-    ret = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&end_obj);    
-    ret = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&n_obj);
-    ret = clSetKernelArg(kernel, 3, sizeof(cl_mem), (void *)&result_obj);
+    ret = clSetKernelArg(kernel, 0, sizeof(cl_mem) * n, (void *)&start_obj);    
+    ret = clSetKernelArg(kernel, 1, sizeof(cl_mem) * n, (void *)&end_obj);    
+    ret = clSetKernelArg(kernel, 2, sizeof(cl_mem)    , (void *)&n_obj);
+    ret = clSetKernelArg(kernel, 3, sizeof(cl_mem) * n, (void *)&result_obj);
 
     // execute kernel
     size_t global_item_size = n;
@@ -66,14 +65,8 @@ float util_integrate(float start_point, float end_point, float n, char* f) {
     ret = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_item_size, NULL/*&local_item_size*/, 0, NULL, NULL);
     
     // retrieve values from array
-    ret = clEnqueueReadBuffer(command_queue, result_obj, CL_TRUE, 0, n * sizeof(int), results, 0, NULL, NULL);
+    ret = clEnqueueReadBuffer(command_queue, result_obj, CL_TRUE, 0, n * sizeof(float), results, 0, NULL, NULL);
     
-    float res = 0;
-    for(i=0; i < n; ++i) {
-        res = results[i];
-    }
-
-
     ret = clFlush(command_queue);
     ret = clFinish(command_queue);
     ret = clReleaseKernel(kernel);
@@ -84,13 +77,29 @@ float util_integrate(float start_point, float end_point, float n, char* f) {
     ret = clReleaseMemObject(result_obj);
     ret = clReleaseCommandQueue(command_queue);
     ret = clReleaseContext(context);
-    free(results);
     free(source_str);
 
-    return res;
+    return results;
 }
 
 int main() {
-    printf("%f \n", util_integrate(-5, 5, 100, "(x+3)*(x+3)"));
+    int n = 3;
+    float *start = malloc(sizeof(float) * n);
+    start[0] = 1;
+    start[1] = 3;
+    start[2] = 5;
+    float *end   = malloc(sizeof(float) * n);
+    end[0] = 3;
+    end[1] = 5;
+    end[2] = 7;
+    float * results = util_integrate(start, end, n, "pow((x-2)*(x-4)*(x-6), 2)");
+    // minimums can be found at
+    // x = 2   => f(x) = 0
+    // x = 4   => f(x) = 0
+    // x = 6   => f(x) = 0
+    while(n > 0) {
+        --n;
+        printf("results[%i]: %f \n", n, results[n]);
+    }
     return 0;
 }

@@ -3,14 +3,14 @@
 
 float find_min(float start_point, float upper);
 
-__kernel void minimize(__global const float *a, __global const float *b, __global const float *n, __global float *results) {
+__kernel void minimize(__global const float *a, __global const float *b, __global const int *n, __global float *results) {
  
     // Get the index of the current element to be processed
     int i = get_global_id(0);
  
     // Do the operation
-    if(i <= n) {
-        results[i] = find_min(*a, *b);
+    if(i < n) {
+        results[i] = find_min(a[i], b[i]);
     }
 }
 
