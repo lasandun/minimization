@@ -9,16 +9,16 @@ enum methods{
       brent
   };
 
-void util_integrate(float* start_point, float* end_point, int n, char* f, float *x_minimum, float *f_minimum, int method) {
+void util_integrate(float* start_point, float* end_point, float* expected_point, int n, char* f, float *x_minimum, float *f_minimum, int method) {
     char* source_str;
     size_t source_size;
     int i = 0;
 
-    FILE* fp = fopen("./golden_section.cl", "r");
+    FILE* fp = fopen("./unidimensional_kernel.cl", "r");
     if(fp == 0){
         printf("kernel file not found");
-        free(x_minimum);
-        free(f_minimum);
+        //free(x_minimum);
+        //free(f_minimum);
         exit(0);
     }
 
@@ -45,6 +45,7 @@ void util_integrate(float* start_point, float* end_point, int n, char* f, float 
 
     cl_mem start_obj  = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
     cl_mem end_obj    = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
+    cl_mem expected_obj    = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
     cl_mem n_obj      = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)      , NULL, &ret);
     cl_mem x_minimum_obj = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n, NULL, &ret);
     cl_mem f_minimum_obj = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n, NULL, &ret);
@@ -52,6 +53,7 @@ void util_integrate(float* start_point, float* end_point, int n, char* f, float 
 
     ret = clEnqueueWriteBuffer(command_queue, start_obj, CL_TRUE, 0, sizeof(float) * n, start_point, 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, end_obj  , CL_TRUE, 0, sizeof(float) * n, end_point  , 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, expected_obj  , CL_TRUE, 0, sizeof(float) * n, expected_point  , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, n_obj    , CL_TRUE, 0, sizeof(int)      , &n         , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, method_obj    , CL_TRUE, 0, sizeof(int)      , &method         , 0, NULL, NULL);
 
@@ -63,10 +65,11 @@ void util_integrate(float* start_point, float* end_point, int n, char* f, float 
     // set arguments of kernel
     ret = clSetKernelArg(kernel, 0, sizeof(cl_mem) * n, (void *)&start_obj);    
     ret = clSetKernelArg(kernel, 1, sizeof(cl_mem) * n, (void *)&end_obj);    
-    ret = clSetKernelArg(kernel, 2, sizeof(cl_mem)    , (void *)&n_obj);
-    ret = clSetKernelArg(kernel, 3, sizeof(cl_mem) * n, (void *)&x_minimum_obj);
-    ret = clSetKernelArg(kernel, 4, sizeof(cl_mem) * n, (void *)&f_minimum_obj);
-    ret = clSetKernelArg(kernel, 5, sizeof(cl_mem)    , (void *)&method_obj);
+    ret = clSetKernelArg(kernel, 2, sizeof(cl_mem) * n, (void *)&expected_obj);    
+    ret = clSetKernelArg(kernel, 3, sizeof(cl_mem)    , (void *)&n_obj);
+    ret = clSetKernelArg(kernel, 4, sizeof(cl_mem) * n, (void *)&x_minimum_obj);
+    ret = clSetKernelArg(kernel, 5, sizeof(cl_mem) * n, (void *)&f_minimum_obj);
+    ret = clSetKernelArg(kernel, 6, sizeof(cl_mem)    , (void *)&method_obj);
 
     // execute kernel
     size_t global_item_size = n;
@@ -103,10 +106,17 @@ int main() {
     end[0] = 3;
     end[1] = 5;
     end[2] = 7;
+
+    float *expected = malloc(sizeof(float) * n);
+    int i;
+    for(i = 0; i < n; ++i) {
+        expected[i] = (start[i] + end[i]) / 2;
+    }
+
     float *x_minimum = (float*) malloc(n * sizeof(float));
     float *f_minimum = (float*) malloc(n * sizeof(float));
     enum methods method = golden_section;
-    util_integrate(start, end, n, "pow((x-2)*(x-4)*(x-6), 2)+1", x_minimum, f_minimum, method);
+    util_integrate(start, end, expected, n, "pow((x-2)*(x-4)*(x-6), 2)+1", x_minimum, f_minimum, method);
     // minimums can be found at
     // x = 2   => f(x) = 1
     // x = 4   => f(x) = 1

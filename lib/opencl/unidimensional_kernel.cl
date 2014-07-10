@@ -1,9 +1,9 @@
 #define epsilon 1e-10
 #define max_iteration 1000
 
-void golden_section(float start_point, float upper, float *x_minimum, float *f_minimum);
+void golden_section(float start_point, float upper, float expected, float *x_minimum, float *f_minimum);
 
-__kernel void minimize(__global const float *a, __global const float *b, __global const int *n,
+__kernel void minimize(__global const float *a, __global const float *b, __global const float *expected, __global const int *n,
                        __global float *x_minimum, __global float *f_minimum,  __global const int *method){
  
     // Get the index of the current element to be processed
@@ -13,14 +13,18 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
     if(i < n) {
         float x, f;
         if(*method == 0) {
-            golden_section(a[i], b[i], &x, &f);
+            golden_section(a[i], b[i], expected[i], &x, &f);
+        }
+        else {
+            x = 0;
+            f = 0;
         }
         x_minimum[i] = x;
         f_minimum[i] = f;
     }
 }
 
-void golden_section(float lower, float upper, float *x_minimum, float *f_minimum) {
+void golden_section(float lower, float upper, float expected, float *x_minimum, float *f_minimum) {
     float ax, bx, cx; 
     float x0, x1, x2, x3;
     float f1, f2;
@@ -28,7 +32,7 @@ void golden_section(float lower, float upper, float *x_minimum, float *f_minimum
     float r = 1 - c;
 
     ax = lower;
-    bx = (upper + lower) / 2.0;
+    bx = expected;
     cx = upper;
 
     x0 = ax;
@@ -72,4 +76,5 @@ void golden_section(float lower, float upper, float *x_minimum, float *f_minimum
         *f_minimum = f2;
     }
 }
+
 
