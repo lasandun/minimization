@@ -5,11 +5,14 @@
 
 enum methods{
       golden_section,
+      newton_rampston,
       bisection,
       brent
   };
 
-void util_integrate(float* start_point, float* end_point, float* expected_point, int n, char* f, float *x_minimum, float *f_minimum, int method) {
+void util_integrate(int n, float* start_point, float* expected_point, float* end_point, enum methods method,
+                    char *f, char *fd, char *fdd,
+                    float *x_minimum, float *f_minimum) {
     char* source_str;
     size_t source_size;
     int i = 0;
@@ -17,8 +20,6 @@ void util_integrate(float* start_point, float* end_point, float* expected_point,
     FILE* fp = fopen("./unidimensional_kernel.cl", "r");
     if(fp == 0){
         printf("kernel file not found");
-        //free(x_minimum);
-        //free(f_minimum);
         exit(0);
     }
 
@@ -26,8 +27,14 @@ void util_integrate(float* start_point, float* end_point, float* expected_point,
     temp_source = (char*) malloc(sizeof(char) * MAX_SOURCE_SIZE);
     source_str  = (char*) malloc(sizeof(char) * MAX_SOURCE_SIZE);
     fread( temp_source, 1, MAX_SOURCE_SIZE, fp);
-    sprintf(source_str, "float f(float x){return (%s);} \n %s", f, temp_source);
-    //printf("\nfunction : \n%s \n", source_str);
+    if(method != newton_rampston) {
+        sprintf(source_str, "float f(float x){return (%s);} \n %s", f, temp_source);
+    }
+    else {
+        sprintf(source_str, "float f(float x){return (%s);}\nfloat fd(float x){return (%s);}\nfloat fdd(float x){return (%s);}\n%s"
+        , f, fd, fdd, temp_source);
+    }
+    // printf("\nfunction\n----------------------------\n%s\n--------------------------\n", source_str);
     source_size = strlen(source_str);
     fclose( fp );
     free(temp_source);
@@ -43,19 +50,19 @@ void util_integrate(float* start_point, float* end_point, float* expected_point,
     cl_context context = clCreateContext( NULL, 1, &device_id, NULL, NULL, &ret);
     cl_command_queue command_queue = clCreateCommandQueue(context, device_id, 0, &ret);    
 
-    cl_mem start_obj  = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
-    cl_mem end_obj    = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
-    cl_mem expected_obj    = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
-    cl_mem n_obj      = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)      , NULL, &ret);
+    cl_mem start_obj     = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
+    cl_mem end_obj       = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
+    cl_mem expected_obj  = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
+    cl_mem n_obj         = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)      , NULL, &ret);
     cl_mem x_minimum_obj = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n, NULL, &ret);
     cl_mem f_minimum_obj = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n, NULL, &ret);
-    cl_mem method_obj      = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)      , NULL, &ret);
+    cl_mem method_obj    = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)      , NULL, &ret);
 
-    ret = clEnqueueWriteBuffer(command_queue, start_obj, CL_TRUE, 0, sizeof(float) * n, start_point, 0, NULL, NULL);
-    ret = clEnqueueWriteBuffer(command_queue, end_obj  , CL_TRUE, 0, sizeof(float) * n, end_point  , 0, NULL, NULL);
-    ret = clEnqueueWriteBuffer(command_queue, expected_obj  , CL_TRUE, 0, sizeof(float) * n, expected_point  , 0, NULL, NULL);
-    ret = clEnqueueWriteBuffer(command_queue, n_obj    , CL_TRUE, 0, sizeof(int)      , &n         , 0, NULL, NULL);
-    ret = clEnqueueWriteBuffer(command_queue, method_obj    , CL_TRUE, 0, sizeof(int)      , &method         , 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, start_obj   , CL_TRUE, 0, sizeof(float) * n, start_point    , 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, end_obj     , CL_TRUE, 0, sizeof(float) * n, end_point      , 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, expected_obj, CL_TRUE, 0, sizeof(float) * n, expected_point , 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, n_obj       , CL_TRUE, 0, sizeof(int)      , &n             , 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, method_obj  , CL_TRUE, 0, sizeof(int)      , &method        , 0, NULL, NULL);
 
     cl_program program = clCreateProgramWithSource(context, 1, (const char **)&source_str, (const size_t *)&source_size, &ret);
     ret = clBuildProgram(program, 1, &device_id, NULL, NULL, NULL);
@@ -116,7 +123,8 @@ int main() {
     float *x_minimum = (float*) malloc(n * sizeof(float));
     float *f_minimum = (float*) malloc(n * sizeof(float));
     enum methods method = golden_section;
-    util_integrate(start, end, expected, n, "pow((x-2)*(x-4)*(x-6), 2)+1", x_minimum, f_minimum, method);
+    //util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", NULL, NULL, x_minimum, f_minimum);
+    util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", "x-3", "2+x-4", x_minimum, f_minimum);
     // minimums can be found at
     // x = 2   => f(x) = 1
     // x = 4   => f(x) = 1
