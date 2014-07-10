@@ -3,8 +3,13 @@
 #include <stdlib.h>
 #define MAX_SOURCE_SIZE (0x100000)
 
+enum methods{
+      golden_section,
+      bisection,
+      brent
+  };
 
-void util_integrate(float* start_point, float* end_point, int n, char* f, float *x_minimum, float *f_minimum) {
+void util_integrate(float* start_point, float* end_point, int n, char* f, float *x_minimum, float *f_minimum, int method) {
     char* source_str;
     size_t source_size;
     int i = 0;
@@ -43,10 +48,12 @@ void util_integrate(float* start_point, float* end_point, int n, char* f, float 
     cl_mem n_obj      = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)      , NULL, &ret);
     cl_mem x_minimum_obj = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n, NULL, &ret);
     cl_mem f_minimum_obj = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n, NULL, &ret);
+    cl_mem method_obj      = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)      , NULL, &ret);
 
     ret = clEnqueueWriteBuffer(command_queue, start_obj, CL_TRUE, 0, sizeof(float) * n, start_point, 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, end_obj  , CL_TRUE, 0, sizeof(float) * n, end_point  , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, n_obj    , CL_TRUE, 0, sizeof(int)      , &n         , 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, method_obj    , CL_TRUE, 0, sizeof(int)      , &method         , 0, NULL, NULL);
 
     cl_program program = clCreateProgramWithSource(context, 1, (const char **)&source_str, (const size_t *)&source_size, &ret);
     ret = clBuildProgram(program, 1, &device_id, NULL, NULL, NULL);
@@ -59,6 +66,7 @@ void util_integrate(float* start_point, float* end_point, int n, char* f, float 
     ret = clSetKernelArg(kernel, 2, sizeof(cl_mem)    , (void *)&n_obj);
     ret = clSetKernelArg(kernel, 3, sizeof(cl_mem) * n, (void *)&x_minimum_obj);
     ret = clSetKernelArg(kernel, 4, sizeof(cl_mem) * n, (void *)&f_minimum_obj);
+    ret = clSetKernelArg(kernel, 5, sizeof(cl_mem)    , (void *)&method_obj);
 
     // execute kernel
     size_t global_item_size = n;
@@ -76,6 +84,7 @@ void util_integrate(float* start_point, float* end_point, int n, char* f, float 
     ret = clReleaseMemObject(start_obj);
     ret = clReleaseMemObject(end_obj);
     ret = clReleaseMemObject(n_obj);
+    ret = clReleaseMemObject(method_obj);
     ret = clReleaseMemObject(x_minimum_obj);
     ret = clReleaseMemObject(f_minimum_obj);
     ret = clReleaseCommandQueue(command_queue);
@@ -96,7 +105,8 @@ int main() {
     end[2] = 7;
     float *x_minimum = (float*) malloc(n * sizeof(float));
     float *f_minimum = (float*) malloc(n * sizeof(float));
-    util_integrate(start, end, n, "pow((x-2)*(x-4)*(x-6), 2)+1", x_minimum, f_minimum);
+    enum methods method = golden_section;
+    util_integrate(start, end, n, "pow((x-2)*(x-4)*(x-6), 2)+1", x_minimum, f_minimum, method);
     // minimums can be found at
     // x = 2   => f(x) = 1
     // x = 4   => f(x) = 1
