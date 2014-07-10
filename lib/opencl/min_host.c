@@ -4,17 +4,16 @@
 #define MAX_SOURCE_SIZE (0x100000)
 
 
-float* util_integrate(float* start_point, float* end_point, int n, char* f) {
+void util_integrate(float* start_point, float* end_point, int n, char* f, float *x_minimum, float *f_minimum) {
     char* source_str;
     size_t source_size;
     int i = 0;
 
-    float *results = (float*) malloc(n * sizeof(float));
-
     FILE* fp = fopen("./golden_section.cl", "r");
     if(fp == 0){
         printf("kernel file not found");
-        free(results);
+        free(x_minimum);
+        free(f_minimum);
         exit(0);
     }
 
@@ -42,7 +41,8 @@ float* util_integrate(float* start_point, float* end_point, int n, char* f) {
     cl_mem start_obj  = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
     cl_mem end_obj    = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
     cl_mem n_obj      = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)      , NULL, &ret);
-    cl_mem result_obj = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n, NULL, &ret);
+    cl_mem x_minimum_obj = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n, NULL, &ret);
+    cl_mem f_minimum_obj = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n, NULL, &ret);
 
     ret = clEnqueueWriteBuffer(command_queue, start_obj, CL_TRUE, 0, sizeof(float) * n, start_point, 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, end_obj  , CL_TRUE, 0, sizeof(float) * n, end_point  , 0, NULL, NULL);
@@ -57,7 +57,8 @@ float* util_integrate(float* start_point, float* end_point, int n, char* f) {
     ret = clSetKernelArg(kernel, 0, sizeof(cl_mem) * n, (void *)&start_obj);    
     ret = clSetKernelArg(kernel, 1, sizeof(cl_mem) * n, (void *)&end_obj);    
     ret = clSetKernelArg(kernel, 2, sizeof(cl_mem)    , (void *)&n_obj);
-    ret = clSetKernelArg(kernel, 3, sizeof(cl_mem) * n, (void *)&result_obj);
+    ret = clSetKernelArg(kernel, 3, sizeof(cl_mem) * n, (void *)&x_minimum_obj);
+    ret = clSetKernelArg(kernel, 4, sizeof(cl_mem) * n, (void *)&f_minimum_obj);
 
     // execute kernel
     size_t global_item_size = n;
@@ -65,7 +66,8 @@ float* util_integrate(float* start_point, float* end_point, int n, char* f) {
     ret = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_item_size, NULL/*&local_item_size*/, 0, NULL, NULL);
     
     // retrieve values from array
-    ret = clEnqueueReadBuffer(command_queue, result_obj, CL_TRUE, 0, n * sizeof(float), results, 0, NULL, NULL);
+    ret = clEnqueueReadBuffer(command_queue, x_minimum_obj, CL_TRUE, 0, n * sizeof(float), x_minimum, 0, NULL, NULL);
+    ret = clEnqueueReadBuffer(command_queue, f_minimum_obj, CL_TRUE, 0, n * sizeof(float), f_minimum, 0, NULL, NULL);
     
     ret = clFlush(command_queue);
     ret = clFinish(command_queue);
@@ -74,12 +76,12 @@ float* util_integrate(float* start_point, float* end_point, int n, char* f) {
     ret = clReleaseMemObject(start_obj);
     ret = clReleaseMemObject(end_obj);
     ret = clReleaseMemObject(n_obj);
-    ret = clReleaseMemObject(result_obj);
+    ret = clReleaseMemObject(x_minimum_obj);
+    ret = clReleaseMemObject(f_minimum_obj);
     ret = clReleaseCommandQueue(command_queue);
     ret = clReleaseContext(context);
     free(source_str);
 
-    return results;
 }
 
 int main() {
@@ -92,14 +94,16 @@ int main() {
     end[0] = 3;
     end[1] = 5;
     end[2] = 7;
-    float * results = util_integrate(start, end, n, "pow((x-2)*(x-4)*(x-6), 2)");
+    float *x_minimum = (float*) malloc(n * sizeof(float));
+    float *f_minimum = (float*) malloc(n * sizeof(float));
+    util_integrate(start, end, n, "pow((x-2)*(x-4)*(x-6), 2)+1", x_minimum, f_minimum);
     // minimums can be found at
-    // x = 2   => f(x) = 0
-    // x = 4   => f(x) = 0
-    // x = 6   => f(x) = 0
+    // x = 2   => f(x) = 1
+    // x = 4   => f(x) = 1
+    // x = 6   => f(x) = 1
     while(n > 0) {
         --n;
-        printf("results[%i]: %f \n", n, results[n]);
+        printf("x_minimum[%i]: %f       f_minimum[%i]: %f \n", n, x_minimum[n], n, f_minimum[n]);
     }
     return 0;
 }

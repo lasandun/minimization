@@ -1,20 +1,24 @@
-#define epsilon 1e-5
-#define max_iteration 100
+#define epsilon 1e-10
+#define max_iteration 1000
 
-float find_min(float start_point, float upper);
+void find_min(float start_point, float upper, float *x_minimum, float *f_minimum);
 
-__kernel void minimize(__global const float *a, __global const float *b, __global const int *n, __global float *results) {
+__kernel void minimize(__global const float *a, __global const float *b, __global const int *n,
+                       __global float *x_minimum, __global float *f_minimum){
  
     // Get the index of the current element to be processed
     int i = get_global_id(0);
  
     // Do the operation
     if(i < n) {
-        results[i] = find_min(a[i], b[i]);
+        float x, f;
+        find_min(a[i], b[i], &x, &f);
+        x_minimum[i] = x;
+        f_minimum[i] = f;
     }
 }
 
-float find_min(float lower, float upper){
+void find_min(float lower, float upper, float *x_minimum, float *f_minimum){
     float ax, bx, cx; 
     float x0, x1, x2, x3;
     float f1, f2;
@@ -58,14 +62,12 @@ float find_min(float lower, float upper){
     }
     // set results of i th job
     if(f1 < f2) {
-      // x_minimum[i] = x1;
-      // f_minimum[i] = f1;
-      return x1;
+        *x_minimum = x1;
+        *f_minimum = f1;
     }
     else {
-      // x_minimum[i] = x2;
-      // f_minimum[i] = f2;
-      return x2;
+        *x_minimum = x2;
+        *f_minimum = f2;
     }
 
 }
