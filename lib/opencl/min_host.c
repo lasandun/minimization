@@ -5,7 +5,7 @@
 
 enum methods{
       golden_section,
-      newton_rampston,
+      newton_raphson,
       bisection,
       brent
   };
@@ -27,13 +27,15 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
     temp_source = (char*) malloc(sizeof(char) * MAX_SOURCE_SIZE);
     source_str  = (char*) malloc(sizeof(char) * MAX_SOURCE_SIZE);
     fread( temp_source, 1, MAX_SOURCE_SIZE, fp);
-    if(method != newton_rampston) {
-        sprintf(source_str, "float f(float x){return (%s);} \n %s", f, temp_source);
-    }
-    else {
+    //if(method != newton_raphson) {
+   //     sprintf(source_str, "float f(float x){return (%s);} \n %s", f, temp_source);
+  //  }
+   // else {
+     if(fd == NULL) fd = "1";  // change value 1 to N/A
+     if(fdd == NULL) fdd = "1";
         sprintf(source_str, "float f(float x){return (%s);}\nfloat fd(float x){return (%s);}\nfloat fdd(float x){return (%s);}\n%s"
         , f, fd, fdd, temp_source);
-    }
+   // }
     // printf("\nfunction\n----------------------------\n%s\n--------------------------\n", source_str);
     source_size = strlen(source_str);
     fclose( fp );
@@ -123,8 +125,8 @@ int main() {
     float *x_minimum = (float*) malloc(n * sizeof(float));
     float *f_minimum = (float*) malloc(n * sizeof(float));
     enum methods method = golden_section;
-    //util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", NULL, NULL, x_minimum, f_minimum);
-    util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", "x-3", "2+x-4", x_minimum, f_minimum);
+    util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", NULL, NULL, x_minimum, f_minimum);
+    //util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", "x-3", "2+x-4", x_minimum, f_minimum);
     // minimums can be found at
     // x = 2   => f(x) = 1
     // x = 4   => f(x) = 1

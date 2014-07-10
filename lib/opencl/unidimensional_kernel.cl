@@ -2,6 +2,7 @@
 #define max_iteration 1000
 
 void golden_section(float start_point, float upper, float expected, float *x_minimum, float *f_minimum);
+void newton_raphson(float start_point, float upper, float expected, float *x_minimum, float *f_minimum);
 
 __kernel void minimize(__global const float *a, __global const float *b, __global const float *expected, __global const int *n,
                        __global float *x_minimum, __global float *f_minimum,  __global const int *method){
@@ -11,14 +12,16 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
  
     // Do the operation
     if(i < n) {
-        float x, f;
-        if(*method == 0) {
-            golden_section(a[i], b[i], expected[i], &x, &f);
+        float x = 0;
+        float f = 0;
+        int m = *method;
+        switch(m) {
+            case 0: golden_section(a[i], b[i], expected[i], &x, &f);
+                    break;
+            case 1: newton_raphson(a[i], b[i], expected[i], &x, &f);
+                    break;
         }
-        else {
-            x = 0;
-            f = 0;
-        }
+
         x_minimum[i] = x;
         f_minimum[i] = f;
     }
@@ -75,6 +78,23 @@ void golden_section(float lower, float upper, float expected, float *x_minimum, 
         *x_minimum = x2;
         *f_minimum = f2;
     }
+}
+void newton_raphson(float start_point, float upper, float expected, float *x_minimum, float *f_minimum) {
+    float x_prev, x, f_prev, f;
+    x_prev = start_point;
+    x = expected;
+    int k=0;
+    while(fabs(x - x_prev) > epsilon && k < max_iteration) {
+      k += 1;
+      x_prev = x;
+      x = x - fd(x) / fdd(x);//   (@proc_1d.call(x).quo(@proc_2d.call(x)));
+      //f_prev = f(x_prev);
+      //f = f(x);
+      //x_min,x_max=[x,x_prev].min, [x,x_prev].max
+      //f_min,f_max=[f,f_prev].min, [f,f_prev].max 
+    }
+    //*x_minimum = x;
+    //*f_minimum = f(x);
 }
 
 
