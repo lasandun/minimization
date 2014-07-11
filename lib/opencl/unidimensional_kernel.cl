@@ -3,6 +3,7 @@
 
 void golden_section(float start_point, float upper, float expected, float *x_minimum, float *f_minimum);
 void newton_raphson(float start_point, float upper, float expected, float *x_minimum, float *f_minimum);
+void bisection(float start_point, float upper, float expected, float *x_minimum, float *f_minimum);
 
 __kernel void minimize(__global const float *a, __global const float *b, __global const float *expected, __global const int *n,
                        __global float *x_minimum, __global float *f_minimum,  __global const int *method){
@@ -19,6 +20,8 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
             case 0: golden_section(a[i], b[i], expected[i], &x, &f);
                     break;
             case 1: newton_raphson(a[i], b[i], expected[i], &x, &f);
+                    break;
+            case 2: bisection(a[i], b[i], expected[i], &x, &f);
                     break;
         }
 
@@ -85,14 +88,16 @@ void newton_raphson(float start_point, float upper, float expected, float *x_min
     x1 = expected;
     int k=0;
     while(fabs(x1 - x_prev) > epsilon && k < max_iteration) {
-      k += 1;
-      x_prev = x1;
-      x1 = x1 - fd(x1) / fdd(x1);
-      f_prev = f(x_prev);
-      f1 = f(x1);
+        k += 1;
+        x_prev = x1;
+        x1 = x1 - fd(x1) / fdd(x1);
+        f_prev = f(x_prev);
+        f1 = f(x1);
     }
     *x_minimum = x1;
     *f_minimum = f(x1);
 }
 
-
+void bisection(float start_point, float upper, float expected, float *x_minimum, float *f_minimum) {
+    
+}

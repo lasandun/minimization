@@ -120,7 +120,9 @@ int main() {
     float *x_minimum = (float*) malloc(n * sizeof(float));
     float *f_minimum = (float*) malloc(n * sizeof(float));
     enum methods method = newton_raphson;//golden_section;
-    util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", NULL, NULL, x_minimum, f_minimum);
+    char *fd  = "(x-2)*(2*x-10)+(x-1)*(2*x-8)+(x-6)*(2*x-6)";
+    char *fdd = "(2*x-10)+2*(x-2)+(x-1)*2+2*(x-1)+2*(x-6)+(2*x-6)";
+    util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", fd, fdd, x_minimum, f_minimum);
     //util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", "x-3", "2+x-4", x_minimum, f_minimum);
     // minimums can be found at
     // x = 2   => f(x) = 1
