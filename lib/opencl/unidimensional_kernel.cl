@@ -80,21 +80,19 @@ void golden_section(float lower, float upper, float expected, float *x_minimum, 
     }
 }
 void newton_raphson(float start_point, float upper, float expected, float *x_minimum, float *f_minimum) {
-    float x_prev, x, f_prev, f;
-    x_prev = start_point;
-    x = expected;
+    float x_prev, x1, f_prev, f1;
+    x_prev = expected;
+    x1 = expected;
     int k=0;
-    while(fabs(x - x_prev) > epsilon && k < max_iteration) {
+    while(fabs(x1 - x_prev) > epsilon && k < max_iteration) {
       k += 1;
-      x_prev = x;
-      x = x - fd(x) / fdd(x);//   (@proc_1d.call(x).quo(@proc_2d.call(x)));
-      //f_prev = f(x_prev);
-      //f = f(x);
-      //x_min,x_max=[x,x_prev].min, [x,x_prev].max
-      //f_min,f_max=[f,f_prev].min, [f,f_prev].max 
+      x_prev = x1;
+      x1 = x1 - fd(x1) / fdd(x1);
+      f_prev = f(x_prev);
+      f1 = f(x1);
     }
-    //*x_minimum = x;
-    //*f_minimum = f(x);
+    *x_minimum = x1;
+    *f_minimum = f(x1);
 }
 
 
