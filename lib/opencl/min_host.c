@@ -55,8 +55,10 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
     cl_mem f_minimum_obj = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n, NULL, &ret);
     cl_mem method_obj    = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)      , NULL, &ret);
 
-    ret = clEnqueueWriteBuffer(command_queue, start_obj   , CL_TRUE, 0, sizeof(float) * n, start_point    , 0, NULL, NULL);
-    ret = clEnqueueWriteBuffer(command_queue, end_obj     , CL_TRUE, 0, sizeof(float) * n, end_point      , 0, NULL, NULL);
+    if(method != newton_raphson) {
+        ret = clEnqueueWriteBuffer(command_queue, start_obj   , CL_TRUE, 0, sizeof(float) * n, start_point    , 0, NULL, NULL);
+        ret = clEnqueueWriteBuffer(command_queue, end_obj     , CL_TRUE, 0, sizeof(float) * n, end_point      , 0, NULL, NULL);
+    }
     ret = clEnqueueWriteBuffer(command_queue, expected_obj, CL_TRUE, 0, sizeof(float) * n, expected_point , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, n_obj       , CL_TRUE, 0, sizeof(int)      , &n             , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, method_obj  , CL_TRUE, 0, sizeof(int)      , &method        , 0, NULL, NULL);
@@ -122,7 +124,8 @@ int main() {
     enum methods method = newton_raphson;//golden_section;
     char *fd  = "(x-2)*(2*x-10)+(x-1)*(2*x-8)+(x-6)*(2*x-6)";
     char *fdd = "(2*x-10)+2*(x-2)+(x-1)*2+2*(x-1)+2*(x-6)+(2*x-6)";
-    util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", fd, fdd, x_minimum, f_minimum);
+    //util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", fd, fdd, x_minimum, f_minimum);
+    util_integrate(n, NULL, expected, NULL, method, "pow((x-2)*(x-4)*(x-6), 2)+1", fd, fdd, x_minimum, f_minimum);
     //util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", "x-3", "2+x-4", x_minimum, f_minimum);
     // minimums can be found at
     // x = 2   => f(x) = 1
