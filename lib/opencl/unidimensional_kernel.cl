@@ -1,9 +1,9 @@
 #define epsilon 1e-10
 #define max_iteration 1000
 
-void golden_section(float start_point, float upper, float expected, float *x_minimum, float *f_minimum);
-void newton_raphson(float start_point, float upper, float expected, float *x_minimum, float *f_minimum);
-void bisection(float start_point, float upper, float expected, float *x_minimum, float *f_minimum);
+void golden_section(float lower, float upper, float expected, float *x_minimum, float *f_minimum);
+void newton_raphson(float lower, float upper, float expected, float *x_minimum, float *f_minimum);
+void bisection(float lower, float upper, float expected, float *x_minimum, float *f_minimum);
 
 __kernel void minimize(__global const float *a, __global const float *b, __global const float *expected, __global const int *n,
                        __global float *x_minimum, __global float *f_minimum,  __global const int *method){
@@ -82,7 +82,7 @@ void golden_section(float lower, float upper, float expected, float *x_minimum, 
         *f_minimum = f2;
     }
 }
-void newton_raphson(float start_point, float upper, float expected, float *x_minimum, float *f_minimum) {
+void newton_raphson(float lower, float upper, float expected, float *x_minimum, float *f_minimum) {
     float x_prev, x1, f_prev, f1;
     x_prev = expected;
     x1 = expected;
@@ -98,6 +98,35 @@ void newton_raphson(float start_point, float upper, float expected, float *x_min
     *f_minimum = f(x1);
 }
 
-void bisection(float start_point, float upper, float expected, float *x_minimum, float *f_minimum) {
-    
+void bisection(float lower, float upper, float expected, float *x_minimum, float *f_minimum) {
+    float ax, cx, bx, fa, fb, fc;
+
+    ax = lower;
+    cx = upper;
+    int k = 0;
+    while(fabs(ax - cx) > epsilon && k < max_iteration) {
+        bx = (ax + cx) / 2;
+        fa = f(ax);
+        fb = f(bx);
+        fc = f(cx);
+        if (fa < fc) {
+            cx = bx;
+            fc = fb;
+        }
+        else {
+            ax = bx;
+            fa = fb;
+        }
+        k += 1;
+    }
+
+    if (fa < fc) {
+        *x_minimum = ax;
+        *f_minimum = f(ax);
+    }
+    else {
+        *x_minimum = cx;
+        *f_minimum = f(cx);
+    }
+
 }
