@@ -324,7 +324,7 @@ module Minimization
         result=brent_iterate
         raise FailedIteration,"Error on iteration" if !result
         begin 
-          @log << [k, @x_lower, @x_upper, @f_lower, @f_upper, (@x_lower-@x_upper).abs, (@f_lower-@f_upper).abs]
+          @log << [k, @x_lower, @_upper, @f_lower, @f_upper, (@x_lower-@x_upper).abs, (@f_lower-@f_upper).abs]
         rescue =>@e
           @log << [k, @e.to_s,nil,nil,nil,nil,nil]
         end
