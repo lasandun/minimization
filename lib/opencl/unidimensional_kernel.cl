@@ -1,5 +1,5 @@
 #define epsilon 1e-10
-#define max_iteration 1000
+#define max_iteration 10e10
 
 void golden_section(float lower, float upper, float expected, float *x_minimum, float *f_minimum);
 void newton_raphson(float lower, float upper, float expected, float *x_minimum, float *f_minimum);

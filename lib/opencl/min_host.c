@@ -85,6 +85,13 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
     // retrieve values from array
     ret = clEnqueueReadBuffer(command_queue, x_minimum_obj, CL_TRUE, 0, n * sizeof(float), x_minimum, 0, NULL, NULL);
     ret = clEnqueueReadBuffer(command_queue, f_minimum_obj, CL_TRUE, 0, n * sizeof(float), f_minimum, 0, NULL, NULL);
+
+
+
+    
+    for(i = 0; i < n; ++i) {
+      printf("%f    %f     \n", x_minimum[i], f_minimum[i]);
+    }
     
     ret = clFlush(command_queue);
     ret = clFinish(command_queue);
@@ -127,7 +134,7 @@ int main() {
     //util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", fd, fdd, x_minimum, f_minimum);
     //util_integrate(n, NULL, expected, NULL, method, "pow((x-2)*(x-4)*(x-6), 2)+1", fd, fdd, x_minimum, f_minimum);
     //util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", "x-3", "2+x-4", x_minimum, f_minimum);
-    util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", NULL, NULL, x_minimum, f_minimum);
+    util_integrate(n, start, expected, end, 1, "pow((x-2)*(x-4)*(x-6), 2)+1", NULL, NULL, x_minimum, f_minimum);
     // minimums can be found at
     // x = 2   => f(x) = 1
     // x = 4   => f(x) = 1
