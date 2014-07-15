@@ -22,13 +22,14 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
         printf("kernel file not found");
         exit(0);
     }
-
     char *temp_source;
     temp_source = (char*) malloc(sizeof(char) * MAX_SOURCE_SIZE);
     source_str  = (char*) malloc(sizeof(char) * MAX_SOURCE_SIZE);
     fread( temp_source, 1, MAX_SOURCE_SIZE, fp);
-    if(fd == NULL)  fd  = "1";  // change value 1 to N/A
-    if(fdd == NULL) fdd = "1";
+    if(method != newton_raphson) {
+        fd  = "1";
+        fdd = "1";
+    }
     sprintf(source_str, "float f(float x){return (%s);}\nfloat fd(float x){return (%s);}\nfloat fdd(float x){return (%s);}\n%s"
                 , f, fd, fdd, temp_source);
     // printf("\nfunction\n----------------------------\n%s\n--------------------------\n", source_str);
@@ -101,40 +102,3 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
     free(source_str);
 
 }
-
-//int main() {
-//    int n = 3;
-//    float *start = malloc(sizeof(float) * n);
-//    start[0] = 1;
-//    start[1] = 3;
-//    start[2] = 5;
-//    float *end   = malloc(sizeof(float) * n);
-//    end[0] = 3;
-//    end[1] = 5;
-//    end[2] = 7;
-//
-//    float *expected = malloc(sizeof(float) * n);
-//    int i;
-//    for(i = 0; i < n; ++i) {
-//        expected[i] = (start[i] + end[i]) / 2;
-//    }
-//
-//    float *x_minimum = (float*) malloc(n * sizeof(float));
-//    float *f_minimum = (float*) malloc(n * sizeof(float));
-//    enum methods method = bisection;//golden_section;
-//    //char *fd  = "(x-2)*(2*x-10)+(x-1)*(2*x-8)+(x-6)*(2*x-6)";
-//    //char *fdd = "(2*x-10)+2*(x-2)+(x-1)*2+2*(x-1)+2*(x-6)+(2*x-6)";
-//    //util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", fd, fdd, x_minimum, f_minimum);
-//    //util_integrate(n, NULL, expected, NULL, method, "pow((x-2)*(x-4)*(x-6), 2)+1", fd, fdd, x_minimum, f_minimum);
-//    //util_integrate(n, start, expected, end, method, "pow((x-2)*(x-4)*(x-6), 2)+1", "x-3", "2+x-4", x_minimum, f_minimum);
-//    util_integrate(n, start, expected, end, 1, "pow((x-2)*(x-4)*(x-6), 2)+1", NULL, NULL, x_minimum, f_minimum);
-//    // minimums can be found at
-//    // x = 2   => f(x) = 1
-//    // x = 4   => f(x) = 1
-//    // x = 6   => f(x) = 1
-//    while(n > 0) {
-//        --n;
-//        printf("x_minimum[%i]: %f       f_minimum[%i]: %f \n", n, x_minimum[n], n, f_minimum[n]);
-//    }
-//    return 0;
-//}

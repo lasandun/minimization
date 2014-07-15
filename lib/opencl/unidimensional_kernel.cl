@@ -1,4 +1,4 @@
-#define epsilon 1e-10
+#define epsilon 1e-5
 #define max_iteration 10e10
 
 void golden_section(float lower, float upper, float expected, float *x_minimum, float *f_minimum);
@@ -82,20 +82,21 @@ void golden_section(float lower, float upper, float expected, float *x_minimum, 
         *f_minimum = f2;
     }
 }
+
 void newton_raphson(float lower, float upper, float expected, float *x_minimum, float *f_minimum) {
     float x_prev, x1, f_prev, f1;
     x_prev = expected;
-    x1 = expected;
-    int k=0;
-    while(fabs(x1 - x_prev) > epsilon && k < max_iteration) {
-        k += 1;
+    x1     = expected;
+    int k  = 0;
+    while(k==0 || (fabs(x1 - x_prev) > epsilon && k < max_iteration)) {
+        k     += 1;
         x_prev = x1;
-        x1 = x1 - fd(x1) / fdd(x1);
+        x1     = x1 - fd(x1) / fdd(x1);
         f_prev = f(x_prev);
-        f1 = f(x1);
+        f1     = f(x1);
     }
     *x_minimum = x1;
-    *f_minimum = f(x1);
+    *f_minimum = f1;
 }
 
 void bisection(float lower, float upper, float expected, float *x_minimum, float *f_minimum) {
