@@ -3,7 +3,7 @@
 #define golden 0.3819660
 
 float f_lower,f_upper;
-float golden = 0.3819660;       // golden = (3 - sqrt(5))/2
+//float golden = 0.3819660;       // golden = (3 - sqrt(5))/2
 float x_minimum, f_minimum;
 float GSL_SQRT_DBL_EPSILON = 1e-4;
 
@@ -78,9 +78,10 @@ int brent_bracketing() {
   return 0;
 }
 
-int do_bracketing = 1;
-int x_lower, x_upper, f_lower, f_upper;
-int v, w, d, e, f_v, f_w;
+float do_bracketing = 1;
+float x_lower, x_upper;
+float v, w, d, e, f_v, f_w;
+float w_upper, w_lower;
 
 void initialize(float lower, float upper, float* x_minimum, float* f_minimum) {
 
@@ -112,6 +113,8 @@ int brent_iterate() {
   x_left = x_lower;
   x_right = x_upper;
 
+  float u;
+
   z_tmp = x_minimum;
   d_tmp = e;
   e_tmp = d;
@@ -121,12 +124,12 @@ int brent_iterate() {
   f_w_tmp = f_w;
   f_z_tmp = f_minimum;
 
-  w_lower = (z - x_left);
-  w_upper = (x_right - z);
+  w_lower = (z_tmp - x_left);
+  w_upper = (x_right - z_tmp);
 
-  float tolerance =  GSL_SQRT_DBL_EPSILON * fabs(z);
+  float tolerance =  GSL_SQRT_DBL_EPSILON * fabs(z_tmp);
 
-  midpoint = 0.5 * (x_left + x_right);
+  float midpoint = 0.5 * (x_left + x_right);
   float _p = 0, q = 0, r = 0;
   if (fabs(e_tmp) > tolerance) {
 
@@ -138,7 +141,7 @@ int brent_iterate() {
     q = 2 * (q - r);
 
     if (q > 0)
-      _p = -_p
+      _p = -_p;
     else
       q = -q;
 
@@ -147,9 +150,9 @@ int brent_iterate() {
   }
 
   if (fabs(_p) < fabs(0.5 * q * r) && _p < q * w_lower && _p < q * w_upper) {
-    t2 = 2 * tolerance ;
+    float t2 = 2 * tolerance ;
 
-    d_tmp = _p.quo(q);
+    d_tmp = _p / q;
     u = z_tmp + d_tmp;
 
     if ((u - x_left) < t2 || (x_right - u) < t2)
@@ -169,7 +172,7 @@ int brent_iterate() {
   e = e_tmp;
   d = d_tmp;
 
-  f_u = f(u);
+  float f_u = f(u);
 
   if (f_u <= f_z_tmp) {
     if (u < z_tmp) {
