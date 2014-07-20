@@ -1,15 +1,39 @@
 #define epsilon 1e-5
 #define max_iteration 10e10
 #define golden 0.3819660
+#define GSL_SQRT_DBL_EPSILON = 1e-4;
 
 float f_lower,f_upper;
-//float golden = 0.3819660;       // golden = (3 - sqrt(5))/2
 float x_minimum, f_minimum;
-float GSL_SQRT_DBL_EPSILON = 1e-4;
 
-float f(float x) {
-    return (x-1) * (x-1);
+
+float do_bracketing = 1;
+float x_lower, x_upper;
+float v, w, d, e, f_v, f_w;
+float w_upper, w_lower;
+
+
+__kernel void minimize(__global const float *a, __global const float *b, __global const float *expected, __global const int *n,
+                       __global float *x_minimum, __global float *f_minimum
+                       __global float *global_data){
+ 
+    // Get the index of the current element to be processed
+    int i = get_global_id(0);
+ 
+    // Do the operation
+    if(i < n) {
+        float x = 0;
+        float f = 0;
+
+        // call brent minimizer
+
+        x_minimum[i] = x;
+        f_minimum[i] = f;
+    }
 }
+
+
+
 
 int brent_bracketing() {
   float eval_max, f_left, f_right, nb_eval, f_center, x_center, x_left, x_right, x_lower, x_upper;
@@ -77,11 +101,6 @@ int brent_bracketing() {
   f_minimum = f_center;
   return 0;
 }
-
-float do_bracketing = 1;
-float x_lower, x_upper;
-float v, w, d, e, f_v, f_w;
-float w_upper, w_lower;
 
 void initialize(float lower, float upper, float* x_minimum, float* f_minimum) {
 
