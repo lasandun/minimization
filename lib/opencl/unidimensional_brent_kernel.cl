@@ -1,16 +1,29 @@
 #define epsilon 1e-5
 #define max_iteration 10e10
 #define golden 0.3819660
-#define GSL_SQRT_DBL_EPSILON = 1e-4;
+#define GSL_SQRT_DBL_EPSILON 1e-4
 
-float f_lower,f_upper;
-float x_minimum, f_minimum;
+#define x_minimum global_data[0]
+#define f_minimum global_data[1]
+#define f_lower   global_data[2]
+#define f_upper   global_data[3]
+#define x_lower   global_data[4]
+#define x_upper   global_data[5]
+#define v         global_data[6]
+#define w         global_data[7]
+#define d         global_data[8]
+#define e         global_data[9]
+#define f_v       global_data[10]
+#define f_w       global_data[10]
+#define w_upper   global_data[10]
+#define w_lower   global_data[10]
 
 
-float do_bracketing = 1;
-float x_lower, x_upper;
-float v, w, d, e, f_v, f_w;
-float w_upper, w_lower;
+//float f_lower,f_upper;
+//float x_minimum, f_minimum;
+//float x_lower, x_upper;
+//float v, w, d, e, f_v, f_w;
+//float w_upper, w_lower;
 
 
 __kernel void minimize(__global const float *a, __global const float *b, __global const float *expected, __global const int *n,
@@ -35,8 +48,8 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
 
 
 
-int brent_bracketing() {
-  float eval_max, f_left, f_right, nb_eval, f_center, x_center, x_left, x_right, x_lower, x_upper;
+int brent_bracketing(float *global_data) {
+  float eval_max, f_left, f_right, nb_eval, f_center, x_center, x_left, x_right;
   eval_max = 10;
   f_left   = f_lower;
   f_right  = f_upper;
@@ -102,15 +115,15 @@ int brent_bracketing() {
   return 0;
 }
 
-void initialize(float lower, float upper, float* x_minimum, float* f_minimum) {
+void initialize(float lower, float upper, float *global_data) {
 
   // super is called
 
   float v_tmp = lower + golden * (upper - lower);
   float w_tmp = v_tmp;
 
-  *x_minimum = v_tmp ;
-  *f_minimum = f(v_tmp) ;
+  x_minimum = v_tmp ;
+  f_minimum = f(v_tmp) ;
   x_lower = lower;
   x_upper = upper;
   f_lower = f(lower) ;
@@ -125,7 +138,7 @@ void initialize(float lower, float upper, float* x_minimum, float* f_minimum) {
   f_w = f_v;
 }
 
-int brent_iterate() {
+int brent_iterate(float *global_data) {
   float x_left, x_right;
   float d_tmp, e_tmp, z_tmp, v_tmp, w_tmp, f_v_tmp, f_w_tmp, f_z_tmp;
 
@@ -237,9 +250,5 @@ int brent_iterate() {
   }
 
   return false;
-}
-
-void brent(float lower, float upper, float expected, float *x_minimum, float *f_minimum) {
-
 }
 
