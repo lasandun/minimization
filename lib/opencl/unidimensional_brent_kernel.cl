@@ -14,9 +14,9 @@
 #define d         global_data[8]
 #define e         global_data[9]
 #define f_v       global_data[10]
-#define f_w       global_data[10]
-#define w_upper   global_data[10]
-#define w_lower   global_data[10]
+#define f_w       global_data[11]
+#define w_upper   global_data[12]
+#define w_lower   global_data[13]
 
 
 //float f_lower,f_upper;
