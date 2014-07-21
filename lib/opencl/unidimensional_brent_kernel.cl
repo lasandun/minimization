@@ -18,35 +18,31 @@
 #define w_upper   global_data[12]
 #define w_lower   global_data[13]
 
-
-//float f_lower,f_upper;
-//float x_minimum, f_minimum;
-//float x_lower, x_upper;
-//float v, w, d, e, f_v, f_w;
-//float w_upper, w_lower;
-
-
-__kernel void minimize(__global const float *a, __global const float *b, __global const float *expected, __global const int *n,
-                       __global float *x_minimum, __global float *f_minimum
+__kernel void minimize(__global const float *a, __global const float *b,
+                       __global const float *expected, __global const bool *bracketing, __global const int *n,
+                       __global float *x_min, __global float *f_min
                        __global float *global_data){
  
     // Get the index of the current element to be processed
     int i = get_global_id(0);
  
     // Do the operation
-    if(i < n) {
-        float x = 0;
-        float f = 0;
+    if(i < *n) {
 
         // call brent minimizer
+        initialize(a[i], b[i], global_data);
+        if(bracketing) {
+            brent_bracketing(global_data);
+        }
+        else {
+            // use exptected value
+        }
+        brent_iterate(global_data);
 
-        x_minimum[i] = x;
-        f_minimum[i] = f;
+        x_min[i] = x_minimum;
+        f_min[i] = f_minimum;
     }
 }
-
-
-
 
 int brent_bracketing(float *global_data) {
   float eval_max, f_left, f_right, nb_eval, f_center, x_center, x_left, x_right;
@@ -116,9 +112,6 @@ int brent_bracketing(float *global_data) {
 }
 
 void initialize(float lower, float upper, float *global_data) {
-
-  // super is called
-
   float v_tmp = lower + golden * (upper - lower);
   float w_tmp = v_tmp;
 
@@ -248,7 +241,6 @@ int brent_iterate(float *global_data) {
       return true;
     }
   }
-
   return false;
 }
 
