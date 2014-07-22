@@ -13,7 +13,7 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
     int i = get_global_id(0);
  
     // Do the operation
-    if(i < n) {
+    if(i < *n) {
         float x = 0;
         float f = 0;
         int m = *method;
