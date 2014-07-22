@@ -1,5 +1,5 @@
 #define epsilon 1e-5
-#define max_iteration 10e10
+#define max_iteration 100
 #define golden 0.3819660
 #define GSL_SQRT_DBL_EPSILON 1e-4
 
@@ -31,7 +31,7 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
     int i = get_global_id(0);
  
     // Do the operation
-    if(i < n) {
+    if(i < *n) {
 
         // call brent minimizer
         float global_data_copy[14];
@@ -49,8 +49,8 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
         //}
         brent_iterate(global_data_copy);
 
-        x_min[i] = x_minimum;
-        f_min[i] = f_minimum;
+        x_min[i] = global_data_copy[0];
+        f_min[i] = global_data_copy[1];
     }
 }
 
