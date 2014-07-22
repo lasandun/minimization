@@ -18,26 +18,36 @@
 #define w_upper   global_data[12]
 #define w_lower   global_data[13]
 
-__kernel void minimize(__global const float *a, __global const float *b,
-                       __global const float *expected, __global const bool *bracketing, __global const int *n,
-                       __global float *x_min, __global float *f_min
-                       __global float *global_data){
+
+int brent_bracketing(float *global_data);
+int brent_iterate(float *global_data);
+void initialize(float lower, float upper, float *global_data);
+
+__kernel void minimize(__global const float *a, __global const float *b, __global const float *expected, __global const int *n,
+                       __global float *x_min, __global float *f_min,   __global const int *method,
+                       __global const int *bracketing, __global float *global_data) {
  
     // Get the index of the current element to be processed
     int i = get_global_id(0);
  
     // Do the operation
-    if(i < *n) {
+    if(i < n) {
 
         // call brent minimizer
-        initialize(a[i], b[i], global_data);
-        if(bracketing) {
-            brent_bracketing(global_data);
+        float global_data_copy[14];
+        int k;
+        for(k = 0; k < 14; ++k) {
+            global_data_copy[k] = global_data[k];
         }
-        else {
-            // use exptected value
-        }
-        brent_iterate(global_data);
+        initialize(a[i], b[i], global_data_copy);
+        brent_bracketing(global_data_copy);
+        //if(*bracketing) {
+        //    brent_bracketing(global_data_copy);
+        //}
+        //else {
+        //    // use exptected value
+        //}
+        brent_iterate(global_data_copy);
 
         x_min[i] = x_minimum;
         f_min[i] = f_minimum;

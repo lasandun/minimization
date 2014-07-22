@@ -87,6 +87,39 @@ module OpenCLMinimization extend FFI::Library
     end
   end
 
+  class BrentMinimizer
+    attr_reader :x_minimum
+    attr_reader :f_minimum
+
+    def initialize(n, start_point, expected_point, end_point, f)
+      @n              = n
+      @start_point    = start_point
+      @expected_point = expected_point
+      @end_point      = end_point
+      @f              = f
+    end
+
+    def minimize
+      start_buffer    = FFI::Buffer.alloc_inout(:pointer, @n)
+      expected_buffer = FFI::Buffer.alloc_inout(:pointer, @n)
+      end_buffer      = FFI::Buffer.alloc_inout(:pointer, @n)
+      x_buffer        = FFI::Buffer.alloc_inout(:pointer, @n)
+      f_buffer        = FFI::Buffer.alloc_inout(:pointer, @n)
+
+      start_buffer.write_array_of_float(@start_point)
+      expected_buffer.write_array_of_float(@expected_point)
+      end_buffer.write_array_of_float(@end_point)
+
+      OpenCLMinimization::util_integrate(@n, start_buffer, expected_buffer, end_buffer, 3, @f, "", "", x_buffer, f_buffer)
+
+      @x_minimum = Array.new(@n)
+      @f_minimum = Array.new(@n)
+      @x_minimum = x_buffer.read_array_of_float(@n)
+      @f_minimum = f_buffer.read_array_of_float(@n)
+    end
+  end
+
+
 end
 
 puts "golden section--------------------------"
@@ -124,6 +157,22 @@ f              = "(x-3)*(x-3)+5"
 fd             = "2*(x-3)"
 fdd            = "2"
 min = OpenCLMinimization::NewtonRampsonMinimizer.new(n, expected_point, f, fd, fdd)
+min.minimize
+puts min.x_minimum.inspect
+puts min.f_minimum.inspect
+
+
+
+
+puts "brent------------------------------------"
+n              = 3
+f              = "(x-55)*(x-55)+5"
+start_point    = [1, 3, 5]
+expected_point = [33, 55, 77]
+end_point      = [100, 300, 500]
+#fd             = "2*(x-55)"
+#fdd            = "2"
+min = OpenCLMinimization::BrentMinimizer.new(n, start_point, expected_point, end_point, f)
 min.minimize
 puts min.x_minimum.inspect
 puts min.f_minimum.inspect

@@ -17,24 +17,44 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
     size_t source_size;
     int i = 0;
 
-    FILE* fp = fopen("./unidimensional_kernel.cl", "r");
-    if(fp == 0){
+    FILE* fp;
+    if(method != brent) {
+        fp = fopen("./unidimensional_kernel.cl", "r");
+    }
+    else {
+        fp = fopen("./unidimensional_brent_kernel.cl", "r");
+    }
+
+    if(fp == 0) {
         printf("kernel file not found");
         exit(0);
     }
     char *temp_source;
     temp_source = (char*) malloc(sizeof(char) * MAX_SOURCE_SIZE);
     source_str  = (char*) malloc(sizeof(char) * MAX_SOURCE_SIZE);
-    fread( temp_source, 1, MAX_SOURCE_SIZE, fp);
+    //fread( temp_source, 1, MAX_SOURCE_SIZE, fp);
+
+    temp_source[0] = '\0';
+    char string[100];
+    while(!feof(fp)) {
+        if (fgets(string, 100, fp)) {
+            //printf("%s", string);
+            sprintf(temp_source, "%s%s",temp_source, string);
+        }
+    }
+
     if(method != newton_raphson) {
         fd  = "1";
         fdd = "1";
     }
-    sprintf(source_str, "float f(float x){return (%s);}\nfloat fd(float x){return (%s);}\nfloat fdd(float x){return (%s);}\n%s"
-                , f, fd, fdd, temp_source);
-    // printf("\nfunction\n----------------------------\n%s\n--------------------------\n", source_str);
+    sprintf(source_str, "float f(float x){return (%s);}\n"
+    "float fd(float x){return (%s);}\n"
+    "float fdd(float x){return (%s);}\n"
+    "%s", f, fd, fdd, temp_source);
+
+    // printf("\nfunction----------------------------\n%s\n--------------------------\n", source_str);
     source_size = strlen(source_str);
-    fclose( fp );
+    fclose(fp);
     free(temp_source);
 
     cl_platform_id platform_id = NULL;
@@ -48,13 +68,16 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
     cl_context context = clCreateContext( NULL, 1, &device_id, NULL, NULL, &ret);
     cl_command_queue command_queue = clCreateCommandQueue(context, device_id, 0, &ret);    
 
-    cl_mem start_obj     = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
-    cl_mem end_obj       = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
-    cl_mem expected_obj  = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n, NULL, &ret);
-    cl_mem n_obj         = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)      , NULL, &ret);
-    cl_mem x_minimum_obj = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n, NULL, &ret);
-    cl_mem f_minimum_obj = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n, NULL, &ret);
-    cl_mem method_obj    = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)      , NULL, &ret);
+    cl_mem start_obj       = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n , NULL, &ret);
+    cl_mem end_obj         = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n , NULL, &ret);
+    cl_mem expected_obj    = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n , NULL, &ret);
+    cl_mem n_obj           = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)       , NULL, &ret);
+    cl_mem x_minimum_obj   = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n , NULL, &ret);
+    cl_mem f_minimum_obj   = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n , NULL, &ret);
+    cl_mem method_obj      = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)       , NULL, &ret);
+    // for brent method only
+    cl_mem bracketing_obj  = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)       , NULL, &ret);
+    cl_mem global_data_obj = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)   * 14, NULL, &ret);
 
     if(method != newton_raphson) {
         ret = clEnqueueWriteBuffer(command_queue, start_obj   , CL_TRUE, 0, sizeof(float) * n, start_point    , 0, NULL, NULL);
@@ -63,9 +86,14 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
     ret = clEnqueueWriteBuffer(command_queue, expected_obj, CL_TRUE, 0, sizeof(float) * n, expected_point , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, n_obj       , CL_TRUE, 0, sizeof(int)      , &n             , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, method_obj  , CL_TRUE, 0, sizeof(int)      , &method        , 0, NULL, NULL);
+    int br = 1;  // testing value
+    if(method == brent) {
+        ret = clEnqueueWriteBuffer(command_queue, bracketing_obj, CL_TRUE, 0, sizeof(int), &br            , 0, NULL, NULL);
+    }
 
     cl_program program = clCreateProgramWithSource(context, 1, (const char **)&source_str, (const size_t *)&source_size, &ret);
     ret = clBuildProgram(program, 1, &device_id, NULL, NULL, NULL);
+    if(ret == CL_BUILD_PROGRAM_FAILURE)  printf("\n\n errorrrrrrrrrrrrrrrrrrrrr %d \n\n", ret);
 
     cl_kernel kernel = clCreateKernel(program, "minimize", &ret);
 
@@ -77,6 +105,8 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
     ret = clSetKernelArg(kernel, 4, sizeof(cl_mem) * n, (void *)&x_minimum_obj);
     ret = clSetKernelArg(kernel, 5, sizeof(cl_mem) * n, (void *)&f_minimum_obj);
     ret = clSetKernelArg(kernel, 6, sizeof(cl_mem)    , (void *)&method_obj);
+    ret = clSetKernelArg(kernel, 7, sizeof(cl_mem)    , (void *)&bracketing_obj);
+    ret = clSetKernelArg(kernel, 8, sizeof(cl_mem) * 14, (void *)&global_data_obj);
 
     // execute kernel
     size_t global_item_size = n;
