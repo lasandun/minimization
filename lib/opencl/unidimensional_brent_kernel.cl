@@ -36,18 +36,19 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
         // call brent minimizer
         float global_data_copy[14];
         int k;
+        // take a copy of global data. Pointers to pointers aren't allowed in openCL kernel codes
         for(k = 0; k < 14; ++k) {
             global_data_copy[k] = global_data[k];
         }
+
         initialize(a[i], b[i], global_data_copy);
         brent_bracketing(global_data_copy);
-        //if(*bracketing) {
-        //    brent_bracketing(global_data_copy);
-        //}
-        //else {
-        //    // use exptected value
-        //}
-        brent_iterate(global_data_copy);
+
+        k = 0;
+        while(k < max_iteration && fabs(global_data_copy[4] - global_data_copy[5]) > epsilon) {
+          k += 1;
+          brent_iterate(global_data_copy);
+       } 
 
         x_min[i] = global_data_copy[0];
         f_min[i] = global_data_copy[1];
