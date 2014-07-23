@@ -36,13 +36,19 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
         float global_data[14];
 
         initialize(a[i], b[i], global_data);
-        brent_bracketing(global_data);
+        if(*do_brent_bracketing == 1) {
+            brent_bracketing(global_data);
+        }
+        else {
+            x_minimum = expected[i];
+            f_minimum = f(expected[i]);
+        }
 
         int k = 0;
         while(k < max_iteration && fabs(x_lower - x_upper) > epsilon) {
           k += 1;
           brent_iterate(global_data);
-       } 
+        } 
 
         x_min[i] = global_data[0];
         f_min[i] = global_data[1];

@@ -2,8 +2,7 @@ require 'ffi'
 
 module OpenCLMinimization extend FFI::Library
   ffi_lib './cl.so'
-  attach_function 'util_integrate', [:int, :pointer, :pointer, :pointer, :int, :string, :string, :string, :pointer,
-  :pointer], :void
+  attach_function 'util_integrate', [:int, :pointer, :pointer, :pointer, :int, :string, :string, :string, :pointer, :pointer, :int], :void
 
 
   class GodlSectionMinimizer
@@ -29,7 +28,7 @@ module OpenCLMinimization extend FFI::Library
       expected_buffer.write_array_of_float(@expected_point)
       end_buffer.write_array_of_float(@end_point)
 
-      OpenCLMinimization::util_integrate(@n, start_buffer, expected_buffer, end_buffer, 0, @f, "", "", x_buffer, f_buffer)
+      OpenCLMinimization::util_integrate(@n, start_buffer, expected_buffer, end_buffer, 0, @f, "", "", x_buffer, f_buffer, 0)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)
@@ -57,7 +56,7 @@ module OpenCLMinimization extend FFI::Library
 
       expected_buffer.write_array_of_float(@expected_point)
 
-      OpenCLMinimization::util_integrate(@n, nil, expected_buffer, nil, 1, @f, @fd, @fdd, x_buffer, f_buffer)
+      OpenCLMinimization::util_integrate(@n, nil, expected_buffer, nil, 1, @f, @fd, @fdd, x_buffer, f_buffer, 0)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)
@@ -78,7 +77,7 @@ module OpenCLMinimization extend FFI::Library
       expected_buffer.write_array_of_float(@expected_point)
       end_buffer.write_array_of_float(@end_point)
 
-      OpenCLMinimization::util_integrate(@n, start_buffer, expected_buffer, end_buffer, 2, @f, "", "", x_buffer, f_buffer)
+      OpenCLMinimization::util_integrate(@n, start_buffer, expected_buffer, end_buffer, 2, @f, "", "", x_buffer, f_buffer, 0)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)
@@ -110,7 +109,7 @@ module OpenCLMinimization extend FFI::Library
       expected_buffer.write_array_of_float(@expected_point)
       end_buffer.write_array_of_float(@end_point)
 
-      OpenCLMinimization::util_integrate(@n, start_buffer, expected_buffer, end_buffer, 3, @f, "", "", x_buffer, f_buffer)
+      OpenCLMinimization::util_integrate(@n, start_buffer, expected_buffer, end_buffer, 3, @f, "", "", x_buffer, f_buffer, 0)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)

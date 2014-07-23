@@ -12,7 +12,8 @@ enum methods{
 
 void util_integrate(int n, float* start_point, float* expected_point, float* end_point, enum methods method,
                     char *f, char *fd, char *fdd,
-                    float *x_minimum, float *f_minimum) {
+                    float *x_minimum, float *f_minimum,
+                    float do_brent_bracketing) {
     char* source_str;
     size_t source_size;
     int i = 0;
@@ -85,14 +86,13 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
     ret = clEnqueueWriteBuffer(command_queue, expected_obj, CL_TRUE, 0, sizeof(float) * n, expected_point , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, n_obj       , CL_TRUE, 0, sizeof(int)      , &n             , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, method_obj  , CL_TRUE, 0, sizeof(int)      , &method        , 0, NULL, NULL);
-    int br = 1;  // testing value
     if(method == brent) {
-        ret = clEnqueueWriteBuffer(command_queue, bracketing_obj, CL_TRUE, 0, sizeof(int), &br            , 0, NULL, NULL);
+        ret = clEnqueueWriteBuffer(command_queue, bracketing_obj, CL_TRUE, 0, sizeof(int), &do_brent_bracketing, 0, NULL, NULL);
     }
 
     cl_program program = clCreateProgramWithSource(context, 1, (const char **)&source_str, (const size_t *)&source_size, &ret);
     ret = clBuildProgram(program, 1, &device_id, NULL, NULL, NULL);
-    if(ret == CL_BUILD_PROGRAM_FAILURE)  printf("\n\n errorrrrrrrrrrrrrrrrrrrrr %d \n\n", ret);
+    if(ret == CL_BUILD_PROGRAM_FAILURE)  printf("\nerror while building kernel: %d\n", ret);
 
     cl_kernel kernel = clCreateKernel(program, "minimize", &ret);
 
