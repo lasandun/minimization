@@ -7,7 +7,7 @@ void bisection(float lower, float upper, float expected, float *x_minimum, float
 
 __kernel void minimize(__global const float *a, __global const float *b, __global const float *expected, __global const int *n,
                        __global float *x_minimum, __global float *f_minimum,  __global const int *method,
-                       __global const int *bracketing, __global float *global_data){
+                       __global const int *do_brent_bracketing){
  
     // Get the index of the current element to be processed
     int i = get_global_id(0);

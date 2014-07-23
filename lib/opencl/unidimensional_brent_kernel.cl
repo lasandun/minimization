@@ -25,7 +25,7 @@ void initialize(float lower, float upper, float *global_data);
 
 __kernel void minimize(__global const float *a, __global const float *b, __global const float *expected, __global const int *n,
                        __global float *x_min, __global float *f_min,   __global const int *method,
-                       __global const int *bracketing, __global float *global_data) {
+                       __global const int *do_brent_bracketing) {
  
     // Get the index of the current element to be processed
     int i = get_global_id(0);
@@ -33,25 +33,19 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
     // Do the operation
     if(i < *n) {
 
-        // call brent minimizer
-        float global_data_copy[14];
-        int k;
-        // take a copy of global data. Pointers to pointers aren't allowed in openCL kernel codes
-        for(k = 0; k < 14; ++k) {
-            global_data_copy[k] = global_data[k];
-        }
+        float global_data[14];
 
-        initialize(a[i], b[i], global_data_copy);
-        brent_bracketing(global_data_copy);
+        initialize(a[i], b[i], global_data);
+        brent_bracketing(global_data);
 
-        k = 0;
-        while(k < max_iteration && fabs(global_data_copy[4] - global_data_copy[5]) > epsilon) {
+        int k = 0;
+        while(k < max_iteration && fabs(x_lower - x_upper) > epsilon) {
           k += 1;
-          brent_iterate(global_data_copy);
+          brent_iterate(global_data);
        } 
 
-        x_min[i] = global_data_copy[0];
-        f_min[i] = global_data_copy[1];
+        x_min[i] = global_data[0];
+        f_min[i] = global_data[1];
     }
 }
 

@@ -77,7 +77,6 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
     cl_mem method_obj      = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)       , NULL, &ret);
     // for brent method only
     cl_mem bracketing_obj  = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)       , NULL, &ret);
-    cl_mem global_data_obj = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)   * 14, NULL, &ret);
 
     if(method != newton_raphson) {
         ret = clEnqueueWriteBuffer(command_queue, start_obj   , CL_TRUE, 0, sizeof(float) * n, start_point    , 0, NULL, NULL);
@@ -106,7 +105,6 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
     ret = clSetKernelArg(kernel, 5, sizeof(cl_mem) * n, (void *)&f_minimum_obj);
     ret = clSetKernelArg(kernel, 6, sizeof(cl_mem)    , (void *)&method_obj);
     ret = clSetKernelArg(kernel, 7, sizeof(cl_mem)    , (void *)&bracketing_obj);
-    ret = clSetKernelArg(kernel, 8, sizeof(cl_mem) * 14, (void *)&global_data_obj);
 
     // execute kernel
     size_t global_item_size = n;
