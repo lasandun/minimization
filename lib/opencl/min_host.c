@@ -1,16 +1,20 @@
+// This file contains the host code of the openCL supported minimization
+
 #include <CL/cl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#define MAX_SOURCE_SIZE (0x100000)
+#define MAX_SOURCE_SIZE (0x100000) // maximum size allowed for the kernel text
 
+// these are the available minimization methods
 enum methods{
       golden_section,
       newton_raphson,
       bisection,
       brent
-  };
+};
 
-void util_integrate(int n, float* start_point, float* expected_point, float* end_point, enum methods method,
+// minimize the given function and set results x_minimum and f_minimum
+void opencl_minimize(int n, float* start_point, float* expected_point, float* end_point, enum methods method,
                     char *f, char *fd, char *fdd,
                     float *x_minimum, float *f_minimum,
                     float do_brent_bracketing) {
@@ -18,36 +22,47 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
     size_t source_size;
     int i = 0;
 
+    // read the corresponding kernel
     FILE* fp;
+    // bisection, golden section and newton-rampson kernel codes are in one file
     if(method != brent) {
         fp = fopen("./unidimensional_kernel.cl", "r");
     }
+    // brent method's kernel is in a seperate file
     else {
         fp = fopen("./unidimensional_brent_kernel.cl", "r");
     }
 
+    // if the kernel file doesn't exist, stop the execution
     if(fp == 0) {
         printf("kernel file not found");
         exit(0);
     }
+    
     char *temp_source;
+    // allocate memory for kenel code
     temp_source = (char*) malloc(sizeof(char) * MAX_SOURCE_SIZE);
     source_str  = (char*) malloc(sizeof(char) * MAX_SOURCE_SIZE);
-    //fread( temp_source, 1, MAX_SOURCE_SIZE, fp);
 
-    temp_source[0] = '\0';
+    temp_source[0] = '\0';  // make temp_source a null string
     char string[100];
+    // read the text of the kernel into temp_source
     while(!feof(fp)) {
         if (fgets(string, 100, fp)) {
-            //printf("%s", string);
             sprintf(temp_source, "%s%s",temp_source, string);
         }
     }
 
+    // if the minimization method isn't newton rampson method, derivatives
+    // aren't required
     if(method != newton_raphson) {
         fd  = "1";
         fdd = "1";
     }
+    // create the complete kernel code appending,
+    // f()   - minimizing function
+    // fd()  - first derivative
+    // fdd() - second deivative
     sprintf(source_str, "float f(float x){return (%s);}\n"
     "float fd(float x){return (%s);}\n"
     "float fdd(float x){return (%s);}\n"
@@ -59,16 +74,20 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
     free(temp_source);
 
     cl_platform_id platform_id = NULL;
-    cl_device_id device_id = NULL;   
+    cl_device_id device_id     = NULL;   
     cl_uint ret_num_devices;
     cl_uint ret_num_platforms;
-    cl_int ret = clGetPlatformIDs(1, &platform_id, &ret_num_platforms);
-    ret = clGetDeviceIDs( platform_id, CL_DEVICE_TYPE_CPU/*CL_DEVICE_TYPE_DEFAULT*/, 1, &device_id, &ret_num_devices);
+    cl_int ret;
+    ret = clGetPlatformIDs(1, &platform_id, &ret_num_platforms);
+    // for minimization, the computing device is set as the CPU
+    ret = clGetDeviceIDs( platform_id, CL_DEVICE_TYPE_CPU, 1, &device_id, &ret_num_devices);
 
     // create kernel
     cl_context context = clCreateContext( NULL, 1, &device_id, NULL, NULL, &ret);
+    // create command queue
     cl_command_queue command_queue = clCreateCommandQueue(context, device_id, 0, &ret);    
 
+    // create memory buffers to share memory with kernel program 
     cl_mem start_obj       = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n , NULL, &ret);
     cl_mem end_obj         = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n , NULL, &ret);
     cl_mem expected_obj    = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n , NULL, &ret);
@@ -79,24 +98,31 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
     // for brent method only
     cl_mem bracketing_obj  = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)       , NULL, &ret);
 
+    // writes the input values into the allocated memory buffers
+    // the start points and end points are required all methods except the newton-rampson method
     if(method != newton_raphson) {
-        ret = clEnqueueWriteBuffer(command_queue, start_obj   , CL_TRUE, 0, sizeof(float) * n, start_point    , 0, NULL, NULL);
-        ret = clEnqueueWriteBuffer(command_queue, end_obj     , CL_TRUE, 0, sizeof(float) * n, end_point      , 0, NULL, NULL);
+        ret = clEnqueueWriteBuffer(command_queue, start_obj, CL_TRUE, 0, sizeof(float) * n, start_point, 0, NULL, NULL);
+        ret = clEnqueueWriteBuffer(command_queue, end_obj  , CL_TRUE, 0, sizeof(float) * n, end_point  , 0, NULL, NULL);
     }
     ret = clEnqueueWriteBuffer(command_queue, expected_obj, CL_TRUE, 0, sizeof(float) * n, expected_point , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, n_obj       , CL_TRUE, 0, sizeof(int)      , &n             , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, method_obj  , CL_TRUE, 0, sizeof(int)      , &method        , 0, NULL, NULL);
+    // do_brent_bracketing is required only for brent method
     if(method == brent) {
         ret = clEnqueueWriteBuffer(command_queue, bracketing_obj, CL_TRUE, 0, sizeof(int), &do_brent_bracketing, 0, NULL, NULL);
     }
 
+    // create kernel program
     cl_program program = clCreateProgramWithSource(context, 1, (const char **)&source_str, (const size_t *)&source_size, &ret);
+    // build the kernel program. Still the code isn't being executed
+    // memory buffers haven't involved. Any error at this stage MAY be a syntax error of kernel code
     ret = clBuildProgram(program, 1, &device_id, NULL, NULL, NULL);
+    // this gives error message only if the kernel code includes any syntax error
     if(ret == CL_BUILD_PROGRAM_FAILURE)  printf("\nerror while building kernel: %d\n", ret);
-
+    // create the kernel calling the kernel function 'minimize'
     cl_kernel kernel = clCreateKernel(program, "minimize", &ret);
 
-    // set arguments of kernel
+    // set arguments of kernel function
     ret = clSetKernelArg(kernel, 0, sizeof(cl_mem) * n, (void *)&start_obj);    
     ret = clSetKernelArg(kernel, 1, sizeof(cl_mem) * n, (void *)&end_obj);    
     ret = clSetKernelArg(kernel, 2, sizeof(cl_mem) * n, (void *)&expected_obj);    
@@ -106,15 +132,15 @@ void util_integrate(int n, float* start_point, float* expected_point, float* end
     ret = clSetKernelArg(kernel, 6, sizeof(cl_mem)    , (void *)&method_obj);
     ret = clSetKernelArg(kernel, 7, sizeof(cl_mem)    , (void *)&bracketing_obj);
 
-    // execute kernel
     size_t global_item_size = n;
-    //size_t local_item_size = n;
-    ret = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_item_size, NULL/*&local_item_size*/, 0, NULL, NULL);
+    // enqueue the jobs and let them to be solved by kernel program
+    ret = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_item_size, NULL, 0, NULL, NULL);
     
-    // retrieve values from array
+    // retrieve results from the shared memory buffers
     ret = clEnqueueReadBuffer(command_queue, x_minimum_obj, CL_TRUE, 0, n * sizeof(float), x_minimum, 0, NULL, NULL);
     ret = clEnqueueReadBuffer(command_queue, f_minimum_obj, CL_TRUE, 0, n * sizeof(float), f_minimum, 0, NULL, NULL);
 
+    // clear the allocated memory
     ret = clFlush(command_queue);
     ret = clFinish(command_queue);
     ret = clReleaseKernel(kernel);
