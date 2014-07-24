@@ -1,3 +1,9 @@
+// This is the kenel code for Golden-Section, Bisection and Newton-Rampsom minimizing methods.
+// This is loaded into memory at runtime and some other functions will be appended such as,
+// float f(float x)   - minimizing function
+// float fd(float x)  - first derivative
+// float fdd(float x) - second derivative
+
 #define epsilon 1e-5
 #define max_iteration 10e10
 
@@ -5,6 +11,7 @@ void golden_section(float lower, float upper, float expected, float *x_minimum, 
 void newton_raphson(float lower, float upper, float expected, float *x_minimum, float *f_minimum);
 void bisection(float lower, float upper, float expected, float *x_minimum, float *f_minimum);
 
+// kernel function which is being called by the host program.
 __kernel void minimize(__global const float *a, __global const float *b, __global const float *expected, __global const int *n,
                        __global float *x_minimum, __global float *f_minimum,  __global const int *method,
                        __global const int *do_brent_bracketing){
@@ -12,11 +19,17 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
     // Get the index of the current element to be processed
     int i = get_global_id(0);
  
-    // Do the operation
+    // Do the operation only for valid i values
     if(i < *n) {
+
+        // pass references of f & x to get results. Pointers to pointers
+        // aren't allowed in OpenCL kernel
         float x = 0;
         float f = 0;
+
         int m = *method;
+
+        // calls the corresponding minimizer
         switch(m) {
             case 0: golden_section(a[i], b[i], expected[i], &x, &f);
                     break;
@@ -26,11 +39,13 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
                     break;
         }
 
+        // set the results at write buffers
         x_minimum[i] = x;
         f_minimum[i] = f;
     }
 }
 
+// golden section minimizer
 void golden_section(float lower, float upper, float expected, float *x_minimum, float *f_minimum) {
     float ax, bx, cx; 
     float x0, x1, x2, x3;
@@ -84,6 +99,7 @@ void golden_section(float lower, float upper, float expected, float *x_minimum, 
     }
 }
 
+// Newton-Rampson minimizer
 void newton_raphson(float lower, float upper, float expected, float *x_minimum, float *f_minimum) {
     float x_prev, x1, f_prev, f1;
     x_prev = expected;
@@ -100,6 +116,7 @@ void newton_raphson(float lower, float upper, float expected, float *x_minimum, 
     *f_minimum = f1;
 }
 
+// bisection minimizer
 void bisection(float lower, float upper, float expected, float *x_minimum, float *f_minimum) {
     float ax, cx, bx, fa, fb, fc;
 
@@ -130,6 +147,5 @@ void bisection(float lower, float upper, float expected, float *x_minimum, float
         *x_minimum = cx;
         *f_minimum = f(cx);
     }
-
 }
 

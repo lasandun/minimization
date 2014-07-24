@@ -1,3 +1,9 @@
+// This is the kenel code for Brent minimizing method.
+// This is loaded into memory at runtime and some other functions will be appended such as,
+// float f(float x)   - minimizing function
+// float fd(float x)  - first derivative (not required in this method)
+// float fdd(float x) - second derivative (not required in this method)
+
 #define epsilon 1e-5
 #define max_iteration 100
 #define golden 0.3819660
@@ -23,6 +29,7 @@ int brent_bracketing(float *global_data);
 int brent_iterate(float *global_data);
 void initialize(float lower, float upper, float *global_data);
 
+// kernel function which is being called by the host program.
 __kernel void minimize(__global const float *a, __global const float *b, __global const float *expected, __global const int *n,
                        __global float *x_min, __global float *f_min,   __global const int *method,
                        __global const int *do_brent_bracketing) {
@@ -30,31 +37,41 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
     // Get the index of the current element to be processed
     int i = get_global_id(0);
  
-    // Do the operation
+    // Do the operation only for valid i values
     if(i < *n) {
 
+        // Needs to pass a lot of variables to initialize, brent_bracketing and brent_iterate methods.
+        // Therefore all the data is put into one array and calls them using preprocessor derivatives.
+        // Check the defined preprocessor derivatives for meaning of each index of 'global_data' array.
         float global_data[14];
 
         initialize(a[i], b[i], global_data);
+
+        // bracketing is done only if the exptected value ins't given
         if(*do_brent_bracketing == 1) {
             brent_bracketing(global_data);
         }
         else {
+            // expected value is given
             x_minimum = expected[i];
             f_minimum = f(expected[i]);
         }
 
         int k = 0;
+        // do brent_iterate until the max_iteration reached or the required 
+        // accuracy is taken
         while(k < max_iteration && fabs(x_lower - x_upper) > epsilon) {
           k += 1;
           brent_iterate(global_data);
         } 
 
+        // set the results
         x_min[i] = global_data[0];
         f_min[i] = global_data[1];
     }
 }
 
+// brent bracketing function
 int brent_bracketing(float *global_data) {
   float eval_max, f_left, f_right, nb_eval, f_center, x_center, x_left, x_right;
   eval_max = 10;
@@ -122,6 +139,7 @@ int brent_bracketing(float *global_data) {
   return 0;
 }
 
+// initialize the inputs
 void initialize(float lower, float upper, float *global_data) {
   float v_tmp = lower + golden * (upper - lower);
   float w_tmp = v_tmp;
@@ -142,6 +160,7 @@ void initialize(float lower, float upper, float *global_data) {
   f_w = f_v;
 }
 
+// iterate Brent method from one step
 int brent_iterate(float *global_data) {
   float x_left, x_right;
   float d_tmp, e_tmp, z_tmp, v_tmp, w_tmp, f_v_tmp, f_w_tmp, f_z_tmp;

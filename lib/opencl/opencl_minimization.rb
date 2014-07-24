@@ -171,8 +171,6 @@ f              = "(x-55)*(x-55)+5"
 start_point    = [1, 3, 5]
 expected_point = [33, 55, 77]
 end_point      = [100, 300, 500]
-#fd             = "2*(x-55)"
-#fdd            = "2"
 min = OpenCLMinimization::BrentMinimizer.new(n, start_point, expected_point, end_point, f)
 min.minimize
 puts min.x_minimum.inspect
