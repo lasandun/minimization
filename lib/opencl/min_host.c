@@ -158,12 +158,20 @@ void opencl_minimize(int n, float* start_point, float* expected_point, float* en
     ret = clFinish(command_queue);
     ret = clReleaseKernel(kernel);
     ret = clReleaseProgram(program);
+
     ret = clReleaseMemObject(start_obj);
+    ret = clReleaseMemObject(expected_obj);
     ret = clReleaseMemObject(end_obj);
     ret = clReleaseMemObject(n_obj);
     ret = clReleaseMemObject(method_obj);
     ret = clReleaseMemObject(x_minimum_obj);
     ret = clReleaseMemObject(f_minimum_obj);
+    ret = clReleaseMemObject(bracketing_obj);
+    ret = clReleaseMemObject(max_iter_obj);
+    ret = clReleaseMemObject(epsilon_obj);
+    ret = clReleaseMemObject(golden_obj);
+    ret = clReleaseMemObject(sqrt_epsilon_obj);
+
     ret = clReleaseCommandQueue(command_queue);
     ret = clReleaseContext(context);
     free(source_str);
