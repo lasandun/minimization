@@ -88,15 +88,19 @@ void opencl_minimize(int n, float* start_point, float* expected_point, float* en
     cl_command_queue command_queue = clCreateCommandQueue(context, device_id, 0, &ret);    
 
     // create memory buffers to share memory with kernel program 
-    cl_mem start_obj       = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n , NULL, &ret);
-    cl_mem end_obj         = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n , NULL, &ret);
-    cl_mem expected_obj    = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n , NULL, &ret);
-    cl_mem n_obj           = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)       , NULL, &ret);
-    cl_mem x_minimum_obj   = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n , NULL, &ret);
-    cl_mem f_minimum_obj   = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n , NULL, &ret);
-    cl_mem method_obj      = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)       , NULL, &ret);
+    cl_mem max_iter_obj     = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)       , NULL, &ret);
+    cl_mem epsilon_obj      = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float)     , NULL, &ret);
+    cl_mem golden_obj       = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float)     , NULL, &ret);
+    cl_mem start_obj        = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n , NULL, &ret);
+    cl_mem end_obj          = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n , NULL, &ret);
+    cl_mem expected_obj     = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * n , NULL, &ret);
+    cl_mem n_obj            = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)       , NULL, &ret);
+    cl_mem x_minimum_obj    = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n , NULL, &ret);
+    cl_mem f_minimum_obj    = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * n , NULL, &ret);
+    cl_mem method_obj       = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)       , NULL, &ret);
     // for brent method only
-    cl_mem bracketing_obj  = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)       , NULL, &ret);
+    cl_mem bracketing_obj   = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(int)       , NULL, &ret);
+    cl_mem sqrt_epsilon_obj = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float)     , NULL, &ret);
 
     // writes the input values into the allocated memory buffers
     // the start points and end points are required all methods except the newton-rampson method
@@ -104,12 +108,20 @@ void opencl_minimize(int n, float* start_point, float* expected_point, float* en
         ret = clEnqueueWriteBuffer(command_queue, start_obj, CL_TRUE, 0, sizeof(float) * n, start_point, 0, NULL, NULL);
         ret = clEnqueueWriteBuffer(command_queue, end_obj  , CL_TRUE, 0, sizeof(float) * n, end_point  , 0, NULL, NULL);
     }
+    int max_iter = 10011; // test value
+    float epsilon = 0.00001;
+    float golden = 0.3819660;
+    float sqrt_epsilon = 0.00001;
+    ret = clEnqueueWriteBuffer(command_queue, max_iter_obj, CL_TRUE, 0, sizeof(int)      , &max_iter      , 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, epsilon_obj , CL_TRUE, 0, sizeof(int)      , &epsilon       , 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, golden_obj  , CL_TRUE, 0, sizeof(int)      , &golden        , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, expected_obj, CL_TRUE, 0, sizeof(float) * n, expected_point , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, n_obj       , CL_TRUE, 0, sizeof(int)      , &n             , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, method_obj  , CL_TRUE, 0, sizeof(int)      , &method        , 0, NULL, NULL);
     // do_brent_bracketing is required only for brent method
     if(method == brent) {
-        ret = clEnqueueWriteBuffer(command_queue, bracketing_obj, CL_TRUE, 0, sizeof(int), &do_brent_bracketing, 0, NULL, NULL);
+        ret = clEnqueueWriteBuffer(command_queue, bracketing_obj  , CL_TRUE, 0, sizeof(int)  , &do_brent_bracketing, 0, NULL, NULL);
+        ret = clEnqueueWriteBuffer(command_queue, sqrt_epsilon_obj, CL_TRUE, 0, sizeof(float), &sqrt_epsilon       , 0, NULL, NULL);
     }
 
     // create kernel program
@@ -131,6 +143,10 @@ void opencl_minimize(int n, float* start_point, float* expected_point, float* en
     ret = clSetKernelArg(kernel, 5, sizeof(cl_mem) * n, (void *)&f_minimum_obj);
     ret = clSetKernelArg(kernel, 6, sizeof(cl_mem)    , (void *)&method_obj);
     ret = clSetKernelArg(kernel, 7, sizeof(cl_mem)    , (void *)&bracketing_obj);
+    ret = clSetKernelArg(kernel, 8, sizeof(cl_mem)    , (void *)&max_iter_obj);
+    ret = clSetKernelArg(kernel, 9, sizeof(cl_mem)    , (void *)&epsilon_obj);
+    ret = clSetKernelArg(kernel, 10, sizeof(cl_mem)    , (void *)&golden_obj);
+    ret = clSetKernelArg(kernel, 11, sizeof(cl_mem)    , (void *)&sqrt_epsilon_obj);
 
     size_t global_item_size = n;
     // enqueue the jobs and let them to be solved by kernel program

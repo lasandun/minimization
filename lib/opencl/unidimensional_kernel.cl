@@ -4,17 +4,18 @@
 // float fd(float x)  - first derivative
 // float fdd(float x) - second derivative
 
-#define epsilon 1e-5
-#define max_iteration 10e10
-
-void golden_section(float lower, float upper, float expected, float *x_minimum, float *f_minimum);
-void newton_raphson(float lower, float upper, float expected, float *x_minimum, float *f_minimum);
-void bisection(float lower, float upper, float expected, float *x_minimum, float *f_minimum);
+void golden_section(float lower, float upper, float expected, float *x_minimum, float *f_minimum, int max_iterations,
+                    float epsilon, float golden);
+void newton_raphson(float lower, float upper, float expected, float *x_minimum, float *f_minimum, int max_iterations,
+                    float epsilon);
+void bisection(float lower, float upper, float expected, float *x_minimum, float *f_minimum, int max_iterations,
+               float epsilon);
 
 // kernel function which is being called by the host program.
 __kernel void minimize(__global const float *a, __global const float *b, __global const float *expected, __global const int *n,
                        __global float *x_minimum, __global float *f_minimum,  __global const int *method,
-                       __global const int *do_brent_bracketing){
+                       __global const int *do_brent_bracketing,
+                         __global const int *max_iterations, __global const float *epsilon, __global const float *golden){
  
     // Get the index of the current element to be processed
     int i = get_global_id(0);
@@ -31,11 +32,11 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
 
         // calls the corresponding minimizer
         switch(m) {
-            case 0: golden_section(a[i], b[i], expected[i], &x, &f);
+            case 0: golden_section(a[i], b[i], expected[i], &x, &f, *max_iterations, *epsilon, *golden);
                     break;
-            case 1: newton_raphson(a[i], b[i], expected[i], &x, &f);
+            case 1: newton_raphson(a[i], b[i], expected[i], &x, &f, *max_iterations, *epsilon);
                     break;
-            case 2: bisection(a[i], b[i], expected[i], &x, &f);
+            case 2: bisection(a[i], b[i], expected[i], &x, &f, *max_iterations, *epsilon);
                     break;
         }
 
@@ -46,11 +47,12 @@ __kernel void minimize(__global const float *a, __global const float *b, __globa
 }
 
 // golden section minimizer
-void golden_section(float lower, float upper, float expected, float *x_minimum, float *f_minimum) {
+void golden_section(float lower, float upper, float expected, float *x_minimum, float *f_minimum, int max_iterations,
+                    float epsilon, float golden) {
     float ax, bx, cx; 
     float x0, x1, x2, x3;
     float f1, f2;
-    float c = (3 - 2.236067) / 2;
+    float c = golden;
     float r = 1 - c;
 
     ax = lower;
@@ -71,7 +73,7 @@ void golden_section(float lower, float upper, float expected, float *x_minimum, 
     f2 = f(x2);
 
     int k = 1;
-    while(fabs(x3 - x0) > epsilon && k < max_iteration) {
+    while(fabs(x3 - x0) > epsilon && k < max_iterations) {
       if(f2 < f1) {
          x0 = x1;
          x1 = x2;
@@ -100,12 +102,12 @@ void golden_section(float lower, float upper, float expected, float *x_minimum, 
 }
 
 // Newton-Rampson minimizer
-void newton_raphson(float lower, float upper, float expected, float *x_minimum, float *f_minimum) {
+void newton_raphson(float lower, float upper, float expected, float *x_minimum, float *f_minimum, int max_iterations, float epsilon) {
     float x_prev, x1, f_prev, f1;
     x_prev = expected;
     x1     = expected;
     int k  = 0;
-    while(k==0 || (fabs(x1 - x_prev) > epsilon && k < max_iteration)) {
+    while(k==0 || (fabs(x1 - x_prev) > epsilon && k < max_iterations)) {
         k     += 1;
         x_prev = x1;
         x1     = x1 - fd(x1) / fdd(x1);
@@ -117,13 +119,13 @@ void newton_raphson(float lower, float upper, float expected, float *x_minimum, 
 }
 
 // bisection minimizer
-void bisection(float lower, float upper, float expected, float *x_minimum, float *f_minimum) {
+void bisection(float lower, float upper, float expected, float *x_minimum, float *f_minimum, int max_iterations, float epsilon) {
     float ax, cx, bx, fa, fb, fc;
 
     ax = lower;
     cx = upper;
     int k = 0;
-    while(fabs(ax - cx) > epsilon && k < max_iteration) {
+    while(fabs(ax - cx) > epsilon && k < max_iterations) {
         bx = (ax + cx) / 2;
         fa = f(ax);
         fb = f(bx);
