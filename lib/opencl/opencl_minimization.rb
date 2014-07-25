@@ -2,10 +2,10 @@ require 'ffi'
 
 module OpenCLMinimization extend FFI::Library
 
-  MAX_ITERATIONS_DEFAULT = 100
-  EPSILON_DEFAULT        = 0.001
+  MAX_ITERATIONS_DEFAULT = 100000
+  EPSILON_DEFAULT        = 0.00001
   GOLDEN_DEFAULT         = 0.3819660
-  SQRT_EPSILON_DEFAULT   = 0.001
+  SQRT_EPSILON_DEFAULT   = 0.00001
 
   ffi_lib "#{File.dirname(__FILE__)}/cl.so"
 
@@ -30,6 +30,10 @@ module OpenCLMinimization extend FFI::Library
   class GodlSectionMinimizer
     attr_reader :x_minimum
     attr_reader :f_minimum
+
+    attr_writer :max_iterations
+    attr_writer :epsilon
+    attr_writer :golden
 
     # == Parameters:
     # * <tt>n</tt>: Number of Jobs
@@ -91,6 +95,10 @@ module OpenCLMinimization extend FFI::Library
   class NewtonRampsonMinimizer
     attr_reader :x_minimum
     attr_reader :f_minimum
+
+    attr_writer :max_iterations
+    attr_writer :epsilon
+    attr_writer :golden
 
     # == Parameters:
     # * <tt>n</tt>: Number of Jobs
@@ -189,6 +197,11 @@ module OpenCLMinimization extend FFI::Library
   class BrentMinimizer
     attr_reader :x_minimum
     attr_reader :f_minimum
+
+    attr_writer :max_iterations
+    attr_writer :epsilon
+    attr_writer :golden
+    attr_writer :sqrt_epsilon
 
     # == Parameters:
     # * <tt>n</tt>: Number of Jobs
