@@ -113,8 +113,8 @@ void opencl_minimize(int n, float* start_point, float* expected_point, float* en
     float golden = 0.3819660;
     float sqrt_epsilon = 0.00001;
     ret = clEnqueueWriteBuffer(command_queue, max_iter_obj, CL_TRUE, 0, sizeof(int)      , &max_iter      , 0, NULL, NULL);
-    ret = clEnqueueWriteBuffer(command_queue, epsilon_obj , CL_TRUE, 0, sizeof(int)      , &epsilon       , 0, NULL, NULL);
-    ret = clEnqueueWriteBuffer(command_queue, golden_obj  , CL_TRUE, 0, sizeof(int)      , &golden        , 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, epsilon_obj , CL_TRUE, 0, sizeof(float)    , &epsilon       , 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, golden_obj  , CL_TRUE, 0, sizeof(float)    , &golden        , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, expected_obj, CL_TRUE, 0, sizeof(float) * n, expected_point , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, n_obj       , CL_TRUE, 0, sizeof(int)      , &n             , 0, NULL, NULL);
     ret = clEnqueueWriteBuffer(command_queue, method_obj  , CL_TRUE, 0, sizeof(int)      , &method        , 0, NULL, NULL);
@@ -135,18 +135,18 @@ void opencl_minimize(int n, float* start_point, float* expected_point, float* en
     cl_kernel kernel = clCreateKernel(program, "minimize", &ret);
 
     // set arguments of kernel function
-    ret = clSetKernelArg(kernel, 0, sizeof(cl_mem) * n, (void *)&start_obj);    
-    ret = clSetKernelArg(kernel, 1, sizeof(cl_mem) * n, (void *)&end_obj);    
-    ret = clSetKernelArg(kernel, 2, sizeof(cl_mem) * n, (void *)&expected_obj);    
-    ret = clSetKernelArg(kernel, 3, sizeof(cl_mem)    , (void *)&n_obj);
-    ret = clSetKernelArg(kernel, 4, sizeof(cl_mem) * n, (void *)&x_minimum_obj);
-    ret = clSetKernelArg(kernel, 5, sizeof(cl_mem) * n, (void *)&f_minimum_obj);
-    ret = clSetKernelArg(kernel, 6, sizeof(cl_mem)    , (void *)&method_obj);
-    ret = clSetKernelArg(kernel, 7, sizeof(cl_mem)    , (void *)&bracketing_obj);
-    ret = clSetKernelArg(kernel, 8, sizeof(cl_mem)    , (void *)&max_iter_obj);
-    ret = clSetKernelArg(kernel, 9, sizeof(cl_mem)    , (void *)&epsilon_obj);
-    ret = clSetKernelArg(kernel, 10, sizeof(cl_mem)    , (void *)&golden_obj);
-    ret = clSetKernelArg(kernel, 11, sizeof(cl_mem)    , (void *)&sqrt_epsilon_obj);
+    ret = clSetKernelArg(kernel, 0 , sizeof(cl_mem) * n, (void *)&start_obj);    
+    ret = clSetKernelArg(kernel, 1 , sizeof(cl_mem) * n, (void *)&end_obj);    
+    ret = clSetKernelArg(kernel, 2 , sizeof(cl_mem) * n, (void *)&expected_obj);    
+    ret = clSetKernelArg(kernel, 3 , sizeof(cl_mem)    , (void *)&n_obj);
+    ret = clSetKernelArg(kernel, 4 , sizeof(cl_mem) * n, (void *)&x_minimum_obj);
+    ret = clSetKernelArg(kernel, 5 , sizeof(cl_mem) * n, (void *)&f_minimum_obj);
+    ret = clSetKernelArg(kernel, 6 , sizeof(cl_mem)    , (void *)&method_obj);
+    ret = clSetKernelArg(kernel, 7 , sizeof(cl_mem)    , (void *)&bracketing_obj);
+    ret = clSetKernelArg(kernel, 8 , sizeof(cl_mem)    , (void *)&max_iter_obj);
+    ret = clSetKernelArg(kernel, 9 , sizeof(cl_mem)    , (void *)&epsilon_obj);
+    ret = clSetKernelArg(kernel, 10, sizeof(cl_mem)   , (void *)&golden_obj);
+    ret = clSetKernelArg(kernel, 11, sizeof(cl_mem)   , (void *)&sqrt_epsilon_obj);
 
     size_t global_item_size = n;
     // enqueue the jobs and let them to be solved by kernel program
