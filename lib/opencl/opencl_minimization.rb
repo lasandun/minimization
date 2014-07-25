@@ -2,11 +2,16 @@ require 'ffi'
 
 module OpenCLMinimization extend FFI::Library
 
+  MAX_ITERATIONS_DEFAULT = 100
+  EPSILON_DEFAULT        = 0.001
+  GOLDEN_DEFAULT         = 0.3819660
+  SQRT_EPSILON_DEFAULT   = 0.001
+
   ffi_lib "#{File.dirname(__FILE__)}/cl.so"
 
   # attack with the opencl_minimize of min_host.c
   attach_function 'opencl_minimize', [:int, :pointer, :pointer, :pointer, :int, :string, :string,
-                                     :string, :pointer, :pointer, :int], :void
+                                     :string, :pointer, :pointer, :int, :int, :float, :float, :float], :void
 
   # Classic GodlSectionMinimizer minimization method.  
   # Basic minimization algorithm. Slow, but robust.
@@ -39,6 +44,10 @@ module OpenCLMinimization extend FFI::Library
       @expected_point = expected_point
       @end_point      = end_point
       @f              = f
+      @max_iterations = MAX_ITERATIONS_DEFAULT
+      @epsilon        = EPSILON_DEFAULT
+      @golden         = GOLDEN_DEFAULT
+      @sqrt_epsilon   = SQRT_EPSILON_DEFAULT
     end
 
     def minimize
@@ -55,7 +64,8 @@ module OpenCLMinimization extend FFI::Library
       end_buffer.write_array_of_float(@end_point)
 
       # call minimizer
-      OpenCLMinimization::opencl_minimize(@n, start_buffer, expected_buffer, end_buffer, 0, @f, "", "", x_buffer, f_buffer, 0)
+      OpenCLMinimization::opencl_minimize(@n, start_buffer, expected_buffer, end_buffer, 0, @f, "", "", x_buffer,
+                                          f_buffer, 0, @max_iterations, @epsilon, @golden, @sqrt_epsilon)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)
@@ -95,6 +105,10 @@ module OpenCLMinimization extend FFI::Library
       @f              = f
       @fd             = fd
       @fdd            = fdd
+      @max_iterations = MAX_ITERATIONS_DEFAULT
+      @epsilon        = EPSILON_DEFAULT
+      @golden         = GOLDEN_DEFAULT
+      @sqrt_epsilon   = SQRT_EPSILON_DEFAULT
     end
 
     def minimize
@@ -107,7 +121,8 @@ module OpenCLMinimization extend FFI::Library
       expected_buffer.write_array_of_float(@expected_point)
 
       # call minimizer
-      OpenCLMinimization::opencl_minimize(@n, nil, expected_buffer, nil, 1, @f, @fd, @fdd, x_buffer, f_buffer, 0)
+      OpenCLMinimization::opencl_minimize(@n, nil, expected_buffer, nil, 1, @f, @fd, @fdd, x_buffer, f_buffer, 0,
+                                          @max_iterations, @epsilon, @golden, @sqrt_epsilon)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)
@@ -147,7 +162,8 @@ module OpenCLMinimization extend FFI::Library
       end_buffer.write_array_of_float(@end_point)
 
       # call minimizer
-      OpenCLMinimization::opencl_minimize(@n, start_buffer, expected_buffer, end_buffer, 2, @f, "", "", x_buffer, f_buffer, 0)
+      OpenCLMinimization::opencl_minimize(@n, start_buffer, expected_buffer, end_buffer, 2, @f, "", "", x_buffer,
+                                          f_buffer, 0, @max_iterations, @epsilon, @golden, @sqrt_epsilon)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)
@@ -187,6 +203,10 @@ module OpenCLMinimization extend FFI::Library
       @expected_point = expected_point
       @end_point      = end_point
       @f              = f
+      @max_iterations = MAX_ITERATIONS_DEFAULT
+      @epsilon        = EPSILON_DEFAULT
+      @golden         = GOLDEN_DEFAULT
+      @sqrt_epsilon   = SQRT_EPSILON_DEFAULT
     end
 
     def minimize
@@ -203,7 +223,8 @@ module OpenCLMinimization extend FFI::Library
       end_buffer.write_array_of_float(@end_point)
 
       # call minimizer
-      OpenCLMinimization::opencl_minimize(@n, start_buffer, expected_buffer, end_buffer, 3, @f, "", "", x_buffer, f_buffer, 0)
+      OpenCLMinimization::opencl_minimize(@n, start_buffer, expected_buffer, end_buffer, 3, @f, "", "", x_buffer,
+                                          f_buffer, 0, @max_iterations, @epsilon, @golden, @sqrt_epsilon)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)
