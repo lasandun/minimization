@@ -3,7 +3,9 @@
 #include <CL/cl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdlib.h>
 #include <limits.h>       //For PATH_MAX
+
 #define MAX_SOURCE_SIZE (0x100000) // maximum size allowed for the kernel text
 
 // these are the available minimization methods
@@ -19,7 +21,8 @@ void opencl_minimize(int n, float* start_point, float* expected_point, float* en
                     char *f, char *fd, char *fdd,
                     float *x_minimum, float *f_minimum,
                     int do_brent_bracketing,
-                    int max_iterations, float epsilon, float golden, float brent_sqrt_epsilon) {
+                    int max_iterations, float epsilon, float golden, float brent_sqrt_epsilon,
+                    char *path_to_kerne) {
     char* source_str;
     size_t source_size;
     int i = 0;
@@ -27,35 +30,21 @@ void opencl_minimize(int n, float* start_point, float* expected_point, float* en
     // read the corresponding kernel
     FILE* fp;
     // bisection, golden section and newton-rampson kernel codes are in one file
-    char *path_to_kernel = (char *) malloc(PATH_MAX + 1);
-    // get absolute path to this file
-    realpath(__BASE_FILE__, path_to_kernel);
-    i = strlen(path_to_kernel) - 1;
-    while(i > 0) {
-        if(path_to_kernel[i] == '/') {
-            // add null character to remove the falling characters
-            path_to_kernel[i + 1] = '\0';
-            break;
-        }
-        --i;
-    }
-    // remove the name of the current file from the absolute path
     if(method != brent) {
         // append the file name to the absolute path
-        sprintf(path_to_kernel, "%s%s", path_to_kernel, "unidimensional_kernel.cl");
-        fp = fopen(path_to_kernel, "r");
+        sprintf(path_to_kerne, "%s%s", path_to_kerne, "/unidimensional_kernel.cl");
+        fp = fopen(path_to_kerne, "r");
     }
     // brent method's kernel is in a seperate file
     else {
         // append the file name to the absolute path
-        sprintf(path_to_kernel, "%s%s", path_to_kernel, "unidimensional_brent_kernel.cl");
-        fp = fopen(path_to_kernel, "r");
+        sprintf(path_to_kerne, "%s%s", path_to_kerne, "/unidimensional_brent_kernel.cl");
+        fp = fopen(path_to_kerne, "r");
     }
-    free(path_to_kernel);
 
     // if the kernel file doesn't exist, stop the execution
     if(fp == 0) {
-        printf("kernel file not found");
+        printf("kernel file not found\n");
         exit(0);
     }
     
@@ -65,11 +54,11 @@ void opencl_minimize(int n, float* start_point, float* expected_point, float* en
     source_str  = (char*) malloc(sizeof(char) * MAX_SOURCE_SIZE);
 
     temp_source[0] = '\0';  // make temp_source a null string
-    char string[100];
+    char line[100];
     // read the text of the kernel into temp_source
     while(!feof(fp)) {
-        if (fgets(string, 100, fp)) {
-            sprintf(temp_source, "%s%s",temp_source, string);
+        if (fgets(line, 100, fp)) {
+            sprintf(temp_source, "%s%s",temp_source, line);
         }
     }
 

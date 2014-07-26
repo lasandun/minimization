@@ -6,12 +6,13 @@ module OpenCLMinimization extend FFI::Library
   EPSILON_DEFAULT        = 0.00001
   GOLDEN_DEFAULT         = 0.3819660
   SQRT_EPSILON_DEFAULT   = 0.00001
+  PATH_TO_KERNEL = File.expand_path(File.dirname(__FILE__))
 
-  ffi_lib "#{File.dirname(__FILE__)}/cl.so"
+  ffi_lib "#{File.expand_path(File.dirname(__FILE__))}/cl.so"
 
   # attack with the opencl_minimize of min_host.c
   attach_function 'opencl_minimize', [:int, :pointer, :pointer, :pointer, :int, :string, :string,
-                                     :string, :pointer, :pointer, :int, :int, :float, :float, :float], :void
+                                     :string, :pointer, :pointer, :int, :int, :float, :float, :float, :string], :void
 
   # Classic GodlSectionMinimizer minimization method.  
   # Basic minimization algorithm. Slow, but robust.
@@ -69,7 +70,7 @@ module OpenCLMinimization extend FFI::Library
 
       # call minimizer
       OpenCLMinimization::opencl_minimize(@n, start_buffer, expected_buffer, end_buffer, 0, @f, "", "", x_buffer,
-                                          f_buffer, 0, @max_iterations, @epsilon, @golden, @sqrt_epsilon)
+                                          f_buffer, 0, @max_iterations, @epsilon, @golden, @sqrt_epsilon, PATH_TO_KERNEL)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)
@@ -130,7 +131,7 @@ module OpenCLMinimization extend FFI::Library
 
       # call minimizer
       OpenCLMinimization::opencl_minimize(@n, nil, expected_buffer, nil, 1, @f, @fd, @fdd, x_buffer, f_buffer, 0,
-                                          @max_iterations, @epsilon, @golden, @sqrt_epsilon)
+                                          @max_iterations, @epsilon, @golden, @sqrt_epsilon, PATH_TO_KERNEL)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)
@@ -171,7 +172,7 @@ module OpenCLMinimization extend FFI::Library
 
       # call minimizer
       OpenCLMinimization::opencl_minimize(@n, start_buffer, expected_buffer, end_buffer, 2, @f, "", "", x_buffer,
-                                          f_buffer, 0, @max_iterations, @epsilon, @golden, @sqrt_epsilon)
+                                          f_buffer, 0, @max_iterations, @epsilon, @golden, @sqrt_epsilon, PATH_TO_KERNEL)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)
@@ -237,7 +238,7 @@ module OpenCLMinimization extend FFI::Library
 
       # call minimizer
       OpenCLMinimization::opencl_minimize(@n, start_buffer, expected_buffer, end_buffer, 3, @f, "", "", x_buffer,
-                                          f_buffer, 0, @max_iterations, @epsilon, @golden, @sqrt_epsilon)
+                                          f_buffer, 0, @max_iterations, @epsilon, @golden, @sqrt_epsilon, PATH_TO_KERNEL)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)
