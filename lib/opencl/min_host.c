@@ -3,6 +3,7 @@
 #include <CL/cl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>       //For PATH_MAX
 #define MAX_SOURCE_SIZE (0x100000) // maximum size allowed for the kernel text
 
 // these are the available minimization methods
@@ -26,13 +27,31 @@ void opencl_minimize(int n, float* start_point, float* expected_point, float* en
     // read the corresponding kernel
     FILE* fp;
     // bisection, golden section and newton-rampson kernel codes are in one file
+    char *path_to_kernel = (char *) malloc(PATH_MAX + 1);
+    // get absolute path to this file
+    realpath(__BASE_FILE__, path_to_kernel);
+    i = strlen(path_to_kernel) - 1;
+    while(i > 0) {
+        if(path_to_kernel[i] == '/') {
+            // add null character to remove the falling characters
+            path_to_kernel[i + 1] = '\0';
+            break;
+        }
+        --i;
+    }
+    // remove the name of the current file from the absolute path
     if(method != brent) {
-        fp = fopen("./unidimensional_kernel.cl", "r");
+        // append the file name to the absolute path
+        sprintf(path_to_kernel, "%s%s", path_to_kernel, "unidimensional_kernel.cl");
+        fp = fopen(path_to_kernel, "r");
     }
     // brent method's kernel is in a seperate file
     else {
-        fp = fopen("./unidimensional_brent_kernel.cl", "r");
+        // append the file name to the absolute path
+        sprintf(path_to_kernel, "%s%s", path_to_kernel, "unidimensional_brent_kernel.cl");
+        fp = fopen(path_to_kernel, "r");
     }
+    free(path_to_kernel);
 
     // if the kernel file doesn't exist, stop the execution
     if(fp == 0) {
