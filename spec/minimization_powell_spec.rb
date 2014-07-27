@@ -1,7 +1,7 @@
 require "./../lib/powell.rb"
 
 describe Minimization::PowellMinimizer do
-  before do
+  before :all do
     @n           = 3
     @limit       = 100
     @epsilon     = 1e-5
@@ -19,7 +19,7 @@ describe Minimization::PowellMinimizer do
     # example 1
     f = proc{ |x| (x[0] - @p[0])**2 + (x[1] - @p[1])**2 + (x[2] - @p[2])**2 }
     @min1 = Minimization::PowellMinimizer.new(f, @start_point, [-@limit, -@limit, -@limit], [@limit, @limit, @limit])
-    while(@min1.converging)
+    while(@min1.converging?)
       @min1.minimize
     end
 
@@ -27,14 +27,14 @@ describe Minimization::PowellMinimizer do
     @k = rand(@limit)
     f2 = proc{ |x| ( @p[0]*x[0] + @p[1]*x[1] + @p[2]*x[2] )**2 +  @k}
     @min2 = Minimization::PowellMinimizer.new(f2, @start_point, [-@limit, -@limit, -@limit], [@limit, @limit, @limit])
-    while(@min2.converging)
+    while(@min2.converging?)
       @min2.minimize
     end
 
     # example 3 : unidimensional
     f3 = proc{ |x| (x[0] - @p[0])**2 + @k}
     @min3 = Minimization::PowellMinimizer.new(f3, @start_point, [-@limit, -@limit, -@limit], [@limit, @limit, @limit])
-    while(@min3.converging)
+    while(@min3.converging?)
       @min3.minimize
     end
 
@@ -42,24 +42,24 @@ describe Minimization::PowellMinimizer do
 
   it "#x_minimum be close to expected in example 1" do 
     0.upto(@n - 1) do |i|
-      @min1.x_minimum[i].should be_within(@epsilon).of(@p[i])
+      expect(@min1.x_minimum[i]).to be_within(@epsilon).of(@p[i])
     end
   end
 
   it "#f_minimum be close to expected in example 1" do 
-    @min1.f_minimum.should be_within(@epsilon).of(0)
+    expect(@min1.f_minimum).to be_within(@epsilon).of(0)
   end
 
   it "#f_minimum be close to expected in example 2" do 
-    @min2.f_minimum.should be_within(@epsilon).of(@k)
+    expect(@min2.f_minimum).to be_within(@epsilon).of(@k)
   end
 
   it "#x_minimum be close to expected in example 3" do 
-    @min3.x_minimum[0].should be_within(@epsilon).of(@p[0])
+    expect(@min3.x_minimum[0]).to be_within(@epsilon).of(@p[0])
   end
 
   it "#f_minimum be close to expected in example 3" do 
-    @min3.f_minimum.should be_within(@epsilon).of(@k)
+    expect(@min3.f_minimum).to be_within(@epsilon).of(@k)
   end
 
 end

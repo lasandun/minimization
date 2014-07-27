@@ -26,7 +26,7 @@ describe OpenCLMinimization::GoldenSectionMinimizer do
 end
 
 describe OpenCLMinimization::BisectionMinimizer do 
-  before do
+  before :all do
     @n              = 3
     @start_point    = [1, 3, 5]
     @expected_point = [1.5, 3.5, 5.5]
@@ -51,7 +51,7 @@ describe OpenCLMinimization::BisectionMinimizer do
 end
 
 describe OpenCLMinimization::BrentMinimizer do 
-  before do
+  before :all do
     @n              = 3
     @start_point    = [1, 3, 5]
     @expected_point = [1.5, 3.5, 5.5]
@@ -77,7 +77,7 @@ end
 
 
 describe OpenCLMinimization::NewtonRampsonMinimizer do 
-  before do
+  before :all do
     @n              = 3
     @expected_point = [1, 100, 1000]
     @f              = "(x-3)*(x-3)+5"
