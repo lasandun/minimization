@@ -3,9 +3,9 @@ require 'ffi'
 module OpenCLMinimization extend FFI::Library
 
   MAX_ITERATIONS_DEFAULT = 100000
-  EPSILON_DEFAULT        = 0.00001
+  EPSILON_DEFAULT        = 0.0001
   GOLDEN_DEFAULT         = 0.3819660
-  SQRT_EPSILON_DEFAULT   = 0.00001
+  SQRT_EPSILON_DEFAULT   = 0.0001
   PATH_TO_KERNEL = File.expand_path(File.dirname(__FILE__))
 
   ffi_lib "#{File.expand_path(File.dirname(__FILE__))}/cl.so"
@@ -14,7 +14,7 @@ module OpenCLMinimization extend FFI::Library
   attach_function 'opencl_minimize', [:int, :pointer, :pointer, :pointer, :int, :string, :string,
                                      :string, :pointer, :pointer, :int, :int, :float, :float, :float, :string], :void
 
-  # Classic GodlSectionMinimizer minimization method.  
+  # Classic GoldenSectionMinimizer minimization method.  
   # Basic minimization algorithm. Slow, but robust.
   # See Unidimensional for methods.
   # == Usage
@@ -23,17 +23,17 @@ module OpenCLMinimization extend FFI::Library
   #  expected_point = [1.5, 3.5, 5.5]
   #  end_point      = [3, 5, 7]
   #  f              = "pow((x-2)*(x-4)*(x-6), 2)+1"
-  #  min = OpenCLMinimization::GodlSectionMinimizer.new(n, start_point, expected_point, end_point, f)
+  #  min = OpenCLMinimization::GoldenSectionMinimizer.new(n, start_point, expected_point, end_point, f)
   #  min.minimize
   #  min.x_minimum
   #  min.f_minimum   
   #
-  class GodlSectionMinimizer
+  class GoldenSectionMinimizer
     attr_reader :x_minimum
     attr_reader :f_minimum
 
     attr_writer :max_iterations
-    attr_writer :epsilon
+    attr_accessor :epsilon
     attr_writer :golden
 
     # == Parameters:
@@ -98,7 +98,7 @@ module OpenCLMinimization extend FFI::Library
     attr_reader :f_minimum
 
     attr_writer :max_iterations
-    attr_writer :epsilon
+    attr_accessor :epsilon
     attr_writer :golden
 
     # == Parameters:
@@ -155,7 +155,7 @@ module OpenCLMinimization extend FFI::Library
   #  min.x_minimum
   #  min.f_minimum
   #
-  class BisectionMinimizer < GodlSectionMinimizer
+  class BisectionMinimizer < GoldenSectionMinimizer
 
     def minimize
       # create Buffers for inputs and outputs
@@ -200,7 +200,7 @@ module OpenCLMinimization extend FFI::Library
     attr_reader :f_minimum
 
     attr_writer :max_iterations
-    attr_writer :epsilon
+    attr_accessor :epsilon
     attr_writer :golden
     attr_writer :sqrt_epsilon
 
