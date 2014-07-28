@@ -1,10 +1,16 @@
 // This file contains the host code of the openCL supported minimization
 #include <stdio.h>
-#include <CL/cl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdlib.h>
 #include <limits.h>       //For PATH_MAX
+
+// import OpenCL headers assuming OS is a linux version or MAC
+#ifdef __APPLE__
+    #include<OpenCL/opencl.h>
+#else
+    #include<CL/cl.h>
+#endif
 
 #define MAX_SOURCE_SIZE (0x100000) // maximum size allowed for the kernel text
 

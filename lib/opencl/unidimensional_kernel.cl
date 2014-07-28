@@ -1,5 +1,5 @@
 // This is the kenel code for Golden-Section, Bisection and Newton-Rampsom minimizing methods.
-// This is loaded into memory at runtime and some other functions will be appended such as,
+// This is loaded into memory at runtime and some other functions will be appended,
 // float f(float x)   - minimizing function
 // float fd(float x)  - first derivative
 // float fdd(float x) - second derivative
