@@ -543,14 +543,3 @@ min.iterate
 puts min.x_minimum.inspect
 
 
-minimizer=Minimization::Brent.minimize(-1000, 1000) {|x| (x - 2)**2 }
-puts minimizer.x_minimum
-minimizer.f_minimum
-
-
-puts "----------------------------------------------"
-min = Minimization::Brent.new([-1000, -1000], [1000, 1000], proc{|x| (x-2)**2 })
-min.expected=[1.5, 2.5]  # Expected value
-min.iterate
-puts min.x_minimum.inspect
-min.f_minimum
