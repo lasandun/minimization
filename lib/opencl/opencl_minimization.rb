@@ -89,7 +89,7 @@ module OpenCLMinimization extend FFI::Library
       # read results
       @x_minimum = x_buffer.read_array_of_float(@n)
       @f_minimum = f_buffer.read_array_of_float(@n)
-      @status    =  status_buffer.read_array_of_int32(1)
+      @status    =  status_buffer.read_array_of_int32(1)[0]
     end
   end
 
@@ -156,7 +156,7 @@ module OpenCLMinimization extend FFI::Library
       # read results
       @x_minimum = x_buffer.read_array_of_float(@n)
       @f_minimum = f_buffer.read_array_of_float(@n)
-      @status    =  status_buffer.read_array_of_int32(1)
+      @status    =  status_buffer.read_array_of_int32(1)[0]
     end
   end
 
@@ -201,7 +201,7 @@ module OpenCLMinimization extend FFI::Library
       # read results
       @x_minimum = x_buffer.read_array_of_float(@n)
       @f_minimum = f_buffer.read_array_of_float(@n)
-      @status    =  status_buffer.read_array_of_int32(1)
+      @status    =  status_buffer.read_array_of_int32(1)[0]
     end
   end
 
@@ -273,7 +273,7 @@ module OpenCLMinimization extend FFI::Library
       # read results
       @x_minimum = x_buffer.read_array_of_float(@n)
       @f_minimum = f_buffer.read_array_of_float(@n)
-      @status    =  status_buffer.read_array_of_int32(1)
+      @status    =  status_buffer.read_array_of_int32(1)[0]
     end
   end
 

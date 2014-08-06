@@ -18,6 +18,9 @@
 #
 # Algorithms for unidimensional minimization
 require 'text-table'
+require 'sourcify'
+require "#{File.expand_path(File.dirname(__FILE__))}/opencl/opencl_minimization.rb"
+
 module Minimization
   VERSION="0.2.1"
   FailedIteration=Class.new(Exception)
@@ -134,6 +137,24 @@ module Minimization
     end
 
     def iterate
+      # try to solve with OpenCL supported methods
+      unless @single_interval
+        # convert the minimizing function proc into a string
+        minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
+        function_1d     = @proc_1d.to_source(:strip_enclosure => true).to_s
+        function_2d     = @proc_2d.to_source(:strip_enclosure => true).to_s
+        # call opencl supported golden section method
+        min = OpenCLMinimization::NewtonRampsonMinimizer.new(@intervals, @expected, minimizing_func, function_1d, function_2d)
+        min.max_iterations = @max_iteration
+        min.epsilon = @epsilon
+        min.minimize
+        # set results
+        @x_minimum = min.x_minimum
+        @f_minimum = min.f_minimum
+        #in case OpenCL method failed, move to pure ruby impementation
+        return if min.status == OpenCLMinimization::SUCCESSFULLY_FINISHED
+      end
+
       0.upto(@intervals - 1) do |i|
         iterate_local(i)
       end
@@ -184,6 +205,23 @@ module Minimization
   class GoldenSection < Unidimensional
     # Start the iteration
     def iterate
+
+      # try to solve with OpenCL supported methods
+      unless @single_interval
+        # convert the minimizing function proc into a string
+        minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
+        # call opencl supported golden section method
+        min = OpenCLMinimization::GoldenSectionMinimizer.new(@intervals, @lower, @expected, @upper, minimizing_func)
+        min.max_iterations = @max_iteration
+        min.epsilon = @epsilon
+        min.minimize
+        # set results
+        @x_minimum = min.x_minimum
+        @f_minimum = min.f_minimum
+        #in case OpenCL method failed, move to pure ruby impementation
+        return if min.status == OpenCLMinimization::SUCCESSFULLY_FINISHED
+      end
+
       if @single_interval
         iterate_local(-1)
       else
@@ -515,12 +553,8 @@ min.iterate
 puts min.x_minimum
 min.f_minimum
 
-minimizer=Minimization::GoldenSection.minimize(-1000, 1000) {|x| (x - 2)**2 }
-puts minimizer.x_minimum
-minimizer.f_minimum
 
-
-min = Minimization::GoldenSection.new([-1000, -1000], [1000, 1000], proc{|x| (x-2)**2 })
+min = Minimization::GoldenSection.new([-1000, -1000], [1000, 1000], proc{|x| (x-2)*(x-2) })
 min.expected=[1.5, 2.5]  # Expected value
 min.iterate
 puts min.x_minimum.inspect
@@ -534,7 +568,9 @@ min.iterate
 min.expected = 10
 puts min.x_minimum.inspect
 
-f   = lambda {|x| (x-3)**2}
+puts "-----------------------------------------------------"
+
+f   = lambda {|x| (x-3)*(x-3)}
 fd  = lambda {|x| 2*(x-3)}
 fdd = lambda {|x| 2}
 min = Minimization::NewtonRaphson.new([-1000, -1000], [1000, 1000], f,fd,fdd)
