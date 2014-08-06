@@ -6,13 +6,20 @@ module OpenCLMinimization extend FFI::Library
   EPSILON_DEFAULT        = 0.0001
   GOLDEN_DEFAULT         = 0.3819660
   SQRT_EPSILON_DEFAULT   = 0.0001
+
+  # status of the opencl computation
+  SUCCESSFULLY_FINISHED       = 0
+  KERNEL_BUILD_FALURE         = -1
+  RUNTIME_ERROR               = -2
+  KERNEL_FILE_NOT_FOUND_ERROR = -3
+
   PATH_TO_KERNEL = File.expand_path(File.dirname(__FILE__))
 
   ffi_lib "#{File.expand_path(File.dirname(__FILE__))}/cl.so"
 
   # attack with the opencl_minimize of min_host.c
   attach_function 'opencl_minimize', [:int, :pointer, :pointer, :pointer, :int, :string, :string,
-                                     :string, :pointer, :pointer, :int, :int, :float, :float, :float, :string], :void
+                                     :string, :pointer, :pointer, :int, :int, :float, :float, :float, :string, :pointer], :void
 
   # Classic GoldenSectionMinimizer minimization method.  
   # Basic minimization algorithm. Slow, but robust.
@@ -25,12 +32,14 @@ module OpenCLMinimization extend FFI::Library
   #  f              = "pow((x-2)*(x-4)*(x-6), 2)+1"
   #  min = OpenCLMinimization::GoldenSectionMinimizer.new(n, start_point, expected_point, end_point, f)
   #  min.minimize
+  #  min.status
   #  min.x_minimum
   #  min.f_minimum   
   #
   class GoldenSectionMinimizer
     attr_reader :x_minimum
     attr_reader :f_minimum
+    attr_reader :status
 
     attr_writer :max_iterations
     attr_accessor :epsilon
@@ -53,6 +62,7 @@ module OpenCLMinimization extend FFI::Library
       @epsilon        = EPSILON_DEFAULT
       @golden         = GOLDEN_DEFAULT
       @sqrt_epsilon   = SQRT_EPSILON_DEFAULT
+      @status         = SUCCESSFULLY_FINISHED
     end
 
     def minimize
@@ -62,6 +72,7 @@ module OpenCLMinimization extend FFI::Library
       end_buffer      = FFI::Buffer.alloc_inout(:pointer, @n)
       x_buffer        = FFI::Buffer.alloc_inout(:pointer, @n)
       f_buffer        = FFI::Buffer.alloc_inout(:pointer, @n)
+      status_buffer   = FFI::Buffer.alloc_inout(:pointer, 1)
 
       # set inputs
       start_buffer.write_array_of_float(@start_point)
@@ -70,15 +81,17 @@ module OpenCLMinimization extend FFI::Library
 
       # call minimizer
       OpenCLMinimization::opencl_minimize(@n, start_buffer, expected_buffer, end_buffer, 0, @f, "", "", x_buffer,
-                                          f_buffer, 0, @max_iterations, @epsilon, @golden, @sqrt_epsilon, PATH_TO_KERNEL)
+                                          f_buffer, 0, @max_iterations, @epsilon, @golden, @sqrt_epsilon, PATH_TO_KERNEL,
+                                          status_buffer)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)
       # read results
       @x_minimum = x_buffer.read_array_of_float(@n)
       @f_minimum = f_buffer.read_array_of_float(@n)
+      @status    =  status_buffer.read_array_of_int32(1)
     end
-    end
+  end
 
   # Classic Newton-Raphson minimization method.  
   # Requires first and second derivative
@@ -90,12 +103,14 @@ module OpenCLMinimization extend FFI::Library
   #  fdd            = "2"
   #  min = OpenCLMinimization::NewtonRampsonMinimizer.new(n, expected_point, f, fd, fdd)
   #  min.minimize
+  #  min.status
   #  min.x_minimum
   #  min.f_minimum
   #
   class NewtonRampsonMinimizer
     attr_reader :x_minimum
     attr_reader :f_minimum
+    attr_reader :status
 
     attr_writer :max_iterations
     attr_accessor :epsilon
@@ -118,6 +133,7 @@ module OpenCLMinimization extend FFI::Library
       @epsilon        = EPSILON_DEFAULT
       @golden         = GOLDEN_DEFAULT
       @sqrt_epsilon   = SQRT_EPSILON_DEFAULT
+      @status         = SUCCESSFULLY_FINISHED
     end
 
     def minimize
@@ -125,19 +141,22 @@ module OpenCLMinimization extend FFI::Library
       expected_buffer = FFI::Buffer.alloc_inout(:pointer, @n)
       x_buffer        = FFI::Buffer.alloc_inout(:pointer, @n)
       f_buffer        = FFI::Buffer.alloc_inout(:pointer, @n)
+      status_buffer   = FFI::Buffer.alloc_inout(:pointer, 1)
 
       # set inputs
       expected_buffer.write_array_of_float(@expected_point)
 
       # call minimizer
       OpenCLMinimization::opencl_minimize(@n, nil, expected_buffer, nil, 1, @f, @fd, @fdd, x_buffer, f_buffer, 0,
-                                          @max_iterations, @epsilon, @golden, @sqrt_epsilon, PATH_TO_KERNEL)
+                                          @max_iterations, @epsilon, @golden, @sqrt_epsilon, PATH_TO_KERNEL,
+                                          status_buffer)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)
       # read results
       @x_minimum = x_buffer.read_array_of_float(@n)
       @f_minimum = f_buffer.read_array_of_float(@n)
+      @status    =  status_buffer.read_array_of_int32(1)
     end
   end
 
@@ -152,6 +171,7 @@ module OpenCLMinimization extend FFI::Library
   #  f              = "pow((x-2)*(x-4)*(x-6), 2)+1"
   #  min = OpenCLMinimization::BisectionMinimizer.new(n, start_point, expected_point, end_point, f)
   #  min.minimize
+  #  min.status
   #  min.x_minimum
   #  min.f_minimum
   #
@@ -164,6 +184,7 @@ module OpenCLMinimization extend FFI::Library
       end_buffer      = FFI::Buffer.alloc_inout(:pointer, @n)
       x_buffer        = FFI::Buffer.alloc_inout(:pointer, @n)
       f_buffer        = FFI::Buffer.alloc_inout(:pointer, @n)
+      status_buffer   = FFI::Buffer.alloc_inout(:pointer, 1)
 
       # set inputs
       start_buffer.write_array_of_float(@start_point)
@@ -172,13 +193,15 @@ module OpenCLMinimization extend FFI::Library
 
       # call minimizer
       OpenCLMinimization::opencl_minimize(@n, start_buffer, expected_buffer, end_buffer, 2, @f, "", "", x_buffer,
-                                          f_buffer, 0, @max_iterations, @epsilon, @golden, @sqrt_epsilon, PATH_TO_KERNEL)
+                                          f_buffer, 0, @max_iterations, @epsilon, @golden, @sqrt_epsilon, PATH_TO_KERNEL,
+                                          status_buffer)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)
       # read results
       @x_minimum = x_buffer.read_array_of_float(@n)
       @f_minimum = f_buffer.read_array_of_float(@n)
+      @status    =  status_buffer.read_array_of_int32(1)
     end
   end
 
@@ -190,14 +213,16 @@ module OpenCLMinimization extend FFI::Library
   #  expected_point = [1.5, 3.5, 5.5]
   #  end_point      = [3, 5, 7]
   #  f              = "pow((x-2)*(x-4)*(x-6), 2)+1"
-  #  min = OpenCLMinimization::BisectionMinimizer.new(n, start_point, expected_point, end_point, f)
+  #  min = OpenCLMinimization::BrentMinimizer.new(n, start_point, expected_point, end_point, f)
   #  min.minimize
+  #  min.status
   #  min.x_minimum
   #  min.f_minimum   
   #  
   class BrentMinimizer
     attr_reader :x_minimum
     attr_reader :f_minimum
+    attr_reader :status
 
     attr_writer :max_iterations
     attr_accessor :epsilon
@@ -221,6 +246,7 @@ module OpenCLMinimization extend FFI::Library
       @epsilon        = EPSILON_DEFAULT
       @golden         = GOLDEN_DEFAULT
       @sqrt_epsilon   = SQRT_EPSILON_DEFAULT
+      @status         = SUCCESSFULLY_FINISHED
     end
 
     def minimize
@@ -230,6 +256,7 @@ module OpenCLMinimization extend FFI::Library
       end_buffer      = FFI::Buffer.alloc_inout(:pointer, @n)
       x_buffer        = FFI::Buffer.alloc_inout(:pointer, @n)
       f_buffer        = FFI::Buffer.alloc_inout(:pointer, @n)
+      status_buffer   = FFI::Buffer.alloc_inout(:pointer, 1)
 
       # set inputs
       start_buffer.write_array_of_float(@start_point)
@@ -238,13 +265,15 @@ module OpenCLMinimization extend FFI::Library
 
       # call minimizer
       OpenCLMinimization::opencl_minimize(@n, start_buffer, expected_buffer, end_buffer, 3, @f, "", "", x_buffer,
-                                          f_buffer, 0, @max_iterations, @epsilon, @golden, @sqrt_epsilon, PATH_TO_KERNEL)
+                                          f_buffer, 0, @max_iterations, @epsilon, @golden, @sqrt_epsilon,
+                                          PATH_TO_KERNEL, status_buffer)
 
       @x_minimum = Array.new(@n)
       @f_minimum = Array.new(@n)
       # read results
       @x_minimum = x_buffer.read_array_of_float(@n)
       @f_minimum = f_buffer.read_array_of_float(@n)
+      @status    =  status_buffer.read_array_of_int32(1)
     end
   end
 

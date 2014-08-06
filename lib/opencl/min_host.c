@@ -14,6 +14,12 @@
 
 #define MAX_SOURCE_SIZE (0x100000) // maximum size allowed for the kernel text
 
+// status of the program
+#define SUCCESSFULLY_FINISHED        0
+#define KERNEL_BUILD_FALURE         -1
+#define RUNTIME_ERROR               -2
+#define KERNEL_FILE_NOT_FOUND_ERROR -3
+
 // these are the available minimization methods
 enum methods{
       golden_section,
@@ -28,29 +34,34 @@ void opencl_minimize(int n, float* start_point, float* expected_point, float* en
                     float *x_minimum, float *f_minimum,
                     int do_brent_bracketing,
                     int max_iterations, float epsilon, float golden, float brent_sqrt_epsilon,
-                    char *path_to_kerne) {
+                    char *path_to_kernel,
+                    int *status) {
     char* source_str;
     size_t source_size;
     int i = 0;
+    //set the status as runtime. If no errors occured, status will be set as successful
+    // at the end of the calculation
+    *status = RUNTIME_ERROR;
 
     // read the corresponding kernel
     FILE* fp;
     // bisection, golden section and newton-rampson kernel codes are in one file
     if(method != brent) {
         // append the file name to the absolute path
-        sprintf(path_to_kerne, "%s%s", path_to_kerne, "/unidimensional_kernel.cl");
-        fp = fopen(path_to_kerne, "r");
+        sprintf(path_to_kernel, "%s%s", path_to_kernel, "/unidimensional_kernel.cl");
+        fp = fopen(path_to_kernel, "r");
     }
     // brent method's kernel is in a seperate file
     else {
         // append the file name to the absolute path
-        sprintf(path_to_kerne, "%s%s", path_to_kerne, "/unidimensional_brent_kernel.cl");
-        fp = fopen(path_to_kerne, "r");
+        sprintf(path_to_kernel, "%s%s", path_to_kernel, "/unidimensional_brent_kernel.cl");
+        fp = fopen(path_to_kernel, "r");
     }
 
     // if the kernel file doesn't exist, stop the execution
     if(fp == 0) {
         printf("kernel file not found\n");
+        *status = KERNEL_FILE_NOT_FOUND_ERROR;
         exit(0);
     }
     
@@ -141,7 +152,10 @@ void opencl_minimize(int n, float* start_point, float* expected_point, float* en
     // memory buffers haven't involved. Any error at this stage MAY be a syntax error of kernel code
     ret = clBuildProgram(program, 1, &device_id, NULL, NULL, NULL);
     // this gives error message only if the kernel code includes any syntax error
-    if(ret == CL_BUILD_PROGRAM_FAILURE)  printf("\nerror while building kernel: %d\n", ret);
+    if(ret == CL_BUILD_PROGRAM_FAILURE) {
+      printf("\nerror while building kernel: %d\n", ret);
+      *status = KERNEL_BUILD_FALURE;
+    }
     // create the kernel calling the kernel function 'minimize'
     cl_kernel kernel = clCreateKernel(program, "minimize", &ret);
 
@@ -189,5 +203,11 @@ void opencl_minimize(int n, float* start_point, float* expected_point, float* en
     ret = clReleaseCommandQueue(command_queue);
     ret = clReleaseContext(context);
     free(source_str);
+
+    // set status is still 'RUNTIME_ERROR', no error
+    // has occured at the execution.
+    if(*status == RUNTIME_ERROR) {
+        *status = SUCCESSFULLY_FINISHED;
+    }
 
 }
