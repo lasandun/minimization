@@ -7,3 +7,7 @@ lib/minimization.rb
 spec/minimization_unidimensional_spec.rb
 spec/spec.opts
 spec/spec_helper.rb
+spec/minimization_conjugate_gradient_fletcher_reeves.rb
+spec/minimization_conjugate_gradient_polak_ribiere.rb
+spec/minimization_nelder_mead.rb
+spec/minimization_powell_spec.rb

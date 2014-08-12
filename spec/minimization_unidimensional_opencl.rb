@@ -1,4 +1,4 @@
-require './../lib/opencl/opencl_minimization.rb'
+require './lib/opencl/opencl_minimization.rb'
 
 describe OpenCLMinimization::GoldenSectionMinimizer do 
   before :all do

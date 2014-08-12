@@ -1,4 +1,4 @@
-require "./../lib/nelder_mead.rb"
+require "./lib/nelder_mead.rb"
 
 describe Minimization::NelderMead do
   before :all do

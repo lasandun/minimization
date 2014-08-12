@@ -1,4 +1,4 @@
-require "./../lib/powell.rb"
+require "./lib/powell.rb"
 
 describe Minimization::PowellMinimizer do
   before :all do

@@ -547,35 +547,3 @@ module Minimization
   end
 end
 
-min = Minimization::GoldenSection.new(-1000, 1000, proc{|x| (x-2)**2 })
-min.expected=1.5  # Expected value
-min.iterate
-puts min.x_minimum
-min.f_minimum
-
-
-min = Minimization::GoldenSection.new([-1000, -1000], [1000, 1000], proc{|x| (x-2)*(x-2) })
-min.expected=[1.5, 2.5]  # Expected value
-min.iterate
-puts min.x_minimum.inspect
-min.f_minimum
-
-f   = lambda {|x| (x-3)**2}
-fd  = lambda {|x| 2*(x-3)}
-fdd = lambda {|x| 2}
-min = Minimization::NewtonRaphson.new(-1000,1000, f,fd,fdd)
-min.iterate
-min.expected = 10
-puts min.x_minimum.inspect
-
-puts "-----------------------------------------------------"
-
-f   = lambda {|x| (x-3)*(x-3)}
-fd  = lambda {|x| 2*(x-3)}
-fdd = lambda {|x| 2}
-min = Minimization::NewtonRaphson.new([-1000, -1000], [1000, 1000], f,fd,fdd)
-min.expected = [100, 100]
-min.iterate
-puts min.x_minimum.inspect
-
-
