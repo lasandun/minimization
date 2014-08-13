@@ -44,6 +44,7 @@ module Minimization
     attr_reader :expected
     # Numbers of iterations
     attr_reader :iterations
+    attr_accessor :use_opencl
     # Create a new minimizer
     def initialize(lower, upper, proc)
       golden = 0.3819660;
@@ -82,7 +83,7 @@ module Minimization
       @iterations=0
       @log=[]
       @log_header=%w{I xl xh f(xl) f(xh) dx df(x)}
-      @use_opencl = true
+      @use_opencl = false
     end
     # Set expected value
     def expected=(v)
@@ -144,10 +145,11 @@ module Minimization
           min.minimize
           @x_minimum = min.x_minimum
           @f_minimum = min.f_minimum
+          @opencl_status    = min.status
           return if min.status == OpenCLMinimization::SUCCESSFULLY_FINISHED
         end
 
-        @log << "OpenCL supported method failed \n" if min.status != OpenCLMinimization::SUCCESSFULLY_FINISHED
+        @log << "OpenCL supported method failed \n" if @opencl_status != OpenCLMinimization::SUCCESSFULLY_FINISHED
 
         # if OpenCL method failed or OpenCL support hasn't been called, use pure ruby support
         @x_minimum = Array.new(@intervals)
