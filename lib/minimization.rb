@@ -122,6 +122,11 @@ module Minimization
       raise "You should implement this"
     end
 
+    # returns a string in OpenCL C syntax from the given proc
+    def proc_to_source_string(proc)
+      return proc.to_source(:strip_enclosure => true).to_s
+    end
+
     # Iterate to find the minimum
     # If only one interval was given, use pure ruby implementataion or GSL, if exist
     # If multiple intervals were given use pure ruby methods or OpenCL support
@@ -134,8 +139,6 @@ module Minimization
         if @use_opencl
           @x_minimum = Array.new(@intervals)
           @f_minimum = Array.new(@intervals)
-          # convert the minimizing function proc into a string
-          minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
           # create the OpenCL supported minimizer
           min = create_opencl_minimizer
           min.minimize
@@ -215,9 +218,9 @@ module Minimization
 
     # create an instance of OpenCL supported minimizer class 
     def create_opencl_minimizer
-      minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
-      function_1d     = @proc_1d.to_source(:strip_enclosure => true).to_s
-      function_2d     = @proc_2d.to_source(:strip_enclosure => true).to_s
+      minimizing_func = proc_to_source_string(@proc)
+      function_1d     = proc_to_source_string(@proc_1d)
+      function_2d     = proc_to_source_string(@proc_2d)
       return OpenCLMinimization::NewtonRampsonMinimizer.new(@intervals, @expected_array, minimizing_func, function_1d, function_2d)
     end
 
@@ -294,7 +297,7 @@ module Minimization
 
     # create an instance of OpenCL supported minimizer class 
     def create_opencl_minimizer
-      minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
+      minimizing_func = proc_to_source_string(@proc)
       return OpenCLMinimization::GoldenSectionMinimizer.new(@intervals, @lower_array, @expected_array, @upper_array, minimizing_func)
     end
 
@@ -547,7 +550,7 @@ module Minimization
 
     # create an instance of OpenCL supported minimizer class 
     def create_opencl_minimizer
-      minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
+      minimizing_func = proc_to_source_string(@proc)
       return OpenCLMinimization::BrentMinimizer.new(@intervals, @lower_array, @expected_array, @upper_array, minimizing_func)
     end
 
