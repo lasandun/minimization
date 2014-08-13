@@ -107,40 +107,50 @@ module Minimization
       raise FailedIteration unless minimizer.iterate
       minimizer
     end
-    # Iterate to find the minimum
+    # Iterate to find the minimum - in single interval
     def iterate_local
       raise "You should implement this"
     end
 
+    # create an instance of OpenCL supported minimizer class
     def create_opencl_minimizer
       raise "You should implement this"
     end
 
+    # create an instance of minimizer class
     def create_minimizer(i)
       raise "You should implement this"
     end
 
+    # Iterate to find the minimum
+    # If only one interval was given, use pure ruby implementataion or GSL, if exist
+    # If multiple intervals were given use pure ruby methods or OpenCL support
+    # In case OpenCL methods failed, this will switch to pure ruby methods
     def iterate
       if @single_interval
         iterate_local
       else
+        # use OpenCL support to solve subproblems
         if @use_opencl
           @x_minimum = Array.new(@intervals)
           @f_minimum = Array.new(@intervals)
           # convert the minimizing function proc into a string
           minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
-          #min = OpenCLMinimization::BrentMinimizer.new(@intervals, @lower_array, @expected_array, @upper_array, minimizing_func)
+          # create the OpenCL supported minimizer
           min = create_opencl_minimizer
           min.minimize
           @x_minimum = min.x_minimum
           @f_minimum = min.f_minimum
           return if min.status == OpenCLMinimization::SUCCESSFULLY_FINISHED
         end
-        puts "opencl failed" if min.status != OpenCLMinimization::SUCCESSFULLY_FINISHED
+
+        @log << "OpenCL supported method failed \n" if min.status != OpenCLMinimization::SUCCESSFULLY_FINISHED
+
+        # if OpenCL method failed or OpenCL support hasn't been called, use pure ruby support
         @x_minimum = Array.new(@intervals)
         @f_minimum = Array.new(@intervals)
+        # for each interval, create new minimizer instance and solve them
         0.upto(@intervals - 1) do |i|
-          #min = Minimization::Brent.new(@lower_array[i], @upper_array[i], @proc)
           min = create_minimizer(i)
           min.iterate
           @x_minimum[i] = min.x_minimum
@@ -203,6 +213,7 @@ module Minimization
       @f_minimum = f(x);
     end
 
+    # create an instance of OpenCL supported minimizer class 
     def create_opencl_minimizer
       minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
       function_1d     = @proc_1d.to_source(:strip_enclosure => true).to_s
@@ -210,6 +221,7 @@ module Minimization
       return OpenCLMinimization::NewtonRampsonMinimizer.new(@intervals, @expected_array, minimizing_func, function_1d, function_2d)
     end
 
+    # create an instance of minimizer class
     def create_minimizer(i)
       return Minimization::NewtonRaphson.new(@lower_array[i], @upper_array[i], @proc, @proc_1d, @proc_2d)
     end
@@ -280,11 +292,13 @@ module Minimization
       true
     end
 
+    # create an instance of OpenCL supported minimizer class 
     def create_opencl_minimizer
       minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
       return OpenCLMinimization::GoldenSectionMinimizer.new(@intervals, @lower_array, @expected_array, @upper_array, minimizing_func)
     end
 
+    # create an instance of minimizer class
     def create_minimizer(i)
       return Minimization::GoldenSection.new(@lower_array[i], @upper_array[i], @proc)
     end
@@ -531,11 +545,13 @@ module Minimization
 
     end
 
+    # create an instance of OpenCL supported minimizer class 
     def create_opencl_minimizer
       minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
       return OpenCLMinimization::BrentMinimizer.new(@intervals, @lower_array, @expected_array, @upper_array, minimizing_func)
     end
 
+    # create an instance of minimizer class
     def create_minimizer(i)
       return Minimization::Brent.new(@lower_array[i], @upper_array[i], @proc)
     end
