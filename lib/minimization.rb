@@ -183,16 +183,17 @@ module Minimization
           min.minimize
           @x_minimum = min.x_minimum
           @f_minimum = min.f_minimum
-        else
-          @x_minimum = Array.new(@intervals)
-          @f_minimum = Array.new(@intervals)
-          0.upto(@intervals - 1) do |i|
-            min=Minimization::NewtonRaphson.new(@lower_array[i], @upper_array[i], @proc, @proc_1d, @proc_2d)
-            min.iterate
-            @x_minimum[i] = min.x_minimum
-            @f_minimum[i] = min.f_minimum
-            @log << min.log
-          end
+          return if min.status == OpenCLMinimization::SUCCESSFULLY_FINISHED
+          puts "opencl failed" if min.status != OpenCLMinimization::SUCCESSFULLY_FINISHED
+        end
+        @x_minimum = Array.new(@intervals)
+        @f_minimum = Array.new(@intervals)
+        0.upto(@intervals - 1) do |i|
+          min=Minimization::NewtonRaphson.new(@lower_array[i], @upper_array[i], @proc, @proc_1d, @proc_2d)
+          min.iterate
+          @x_minimum[i] = min.x_minimum
+          @f_minimum[i] = min.f_minimum
+          @log << min.log
         end
       end
     end
@@ -275,16 +276,17 @@ module Minimization
           min.minimize
           @x_minimum = min.x_minimum
           @f_minimum = min.f_minimum
-        else
-          @x_minimum = Array.new(@intervals)
-          @f_minimum = Array.new(@intervals)
-          0.upto(@intervals - 1) do |i|
-            min=Minimization::GoldenSection.new(@lower_array[i], @upper_array[i], @proc)
-            min.iterate
-            @x_minimum[i] = min.x_minimum
-            @f_minimum[i] = min.f_minimum
-            @log << min.log
-          end
+          return if min.status == OpenCLMinimization::SUCCESSFULLY_FINISHED
+          puts "opencl failed" if min.status != OpenCLMinimization::SUCCESSFULLY_FINISHED
+        end
+        @x_minimum = Array.new(@intervals)
+        @f_minimum = Array.new(@intervals)
+        0.upto(@intervals - 1) do |i|
+          min=Minimization::GoldenSection.new(@lower_array[i], @upper_array[i], @proc)
+          min.iterate
+          @x_minimum[i] = min.x_minimum
+          @f_minimum[i] = min.f_minimum
+          @log << min.log
         end
       end
     end
@@ -543,67 +545,19 @@ module Minimization
           min.minimize
           @x_minimum = min.x_minimum
           @f_minimum = min.f_minimum
-        else
-          @x_minimum = Array.new(@intervals)
-          @f_minimum = Array.new(@intervals)
-          0.upto(@intervals - 1) do |i|
-            min=Minimization::Brent.new(@lower_array[i], @upper_array[i], @proc)
-            min.iterate
-            @x_minimum[i] = min.x_minimum
-            @f_minimum[i] = min.f_minimum
-            @log << min.log
-          end
+          return if min.status == OpenCLMinimization::SUCCESSFULLY_FINISHED
+        end
+        puts "opencl failed" if min.status != OpenCLMinimization::SUCCESSFULLY_FINISHED
+        @x_minimum = Array.new(@intervals)
+        @f_minimum = Array.new(@intervals)
+        0.upto(@intervals - 1) do |i|
+          min=Minimization::Brent.new(@lower_array[i], @upper_array[i], @proc)
+          min.iterate
+          @x_minimum[i] = min.x_minimum
+          @f_minimum[i] = min.f_minimum
+          @log << min.log
         end
       end
     end
   end
 end
-
-
-min=Minimization::GoldenSection.new(-1000, 2000, proc{|x| (x+1)**2} )
-min.expected=1.5  # Expected value
-min.iterate
-puts min.x_minimum.inspect
-min.f_minimum
-
-x = Minimization::GoldenSection.minimize(-1000, 1000) {|x|  (x - 3)**2 }
-puts x.x_minimum.inspect
-
-
-f   = lambda {|x| (x - 1)**2}
-fd  = lambda {|x| 2*(x - 1)}
-fdd = lambda {|x| 2}
-min = Minimization::NewtonRaphson.new(-1000,1000, f,fd,fdd)
-min.iterate
-puts min.x_minimum.inspect
-min.f_minimum
-
-#min = Minimization::NewtonRaphson.minimize(-1000,1000, f,fd,fdd)
-#puts min.x_minimum.inspect
-
-f = proc {|x| (x + 1)**2}
-min=Minimization::Brent.minimize(-1000,20000, &f)
-min.expected = 1.5  # Expected value
-min.iterate
-puts min.x_minimum.inspect
-
-#min=Minimization::Brent.minimize(-1000,20000, proc {|x| (x + 1)**2})
-#puts min.x_minimum.inspect
-
-puts "**********************************"
-min=Minimization::GoldenSection.new([-1000, -2000], [2000, 1000], proc{|x| (x+1)*(x+1)} )
-min.iterate
-puts min.x_minimum.inspect
-
-puts "**********************************"
-f   = lambda {|x| (x - 1)*(x - 1)}
-fd  = lambda {|x| 2*(x - 1)}
-fdd = lambda {|x| 2}
-min = Minimization::NewtonRaphson.new([-1000, -2000], [2000, 1000], f,fd,fdd)
-min.iterate
-puts min.x_minimum.inspect
-
-puts "**********************************"
-min=Minimization::Brent.new([-1000, -2000], [2000, 1000], proc{|x| (x+1)*(x+1)} )
-min.iterate
-puts min.x_minimum.inspect
