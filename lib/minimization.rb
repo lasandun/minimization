@@ -46,7 +46,8 @@ module Minimization
     attr_reader :iterations
     # Create a new minimizer
     def initialize(lower, upper, proc)
-      golden = 0.3819660
+      golden = 0.3819660;
+
       if(lower.class.to_s != 'Array' and upper.class.to_s != 'Array')
         @single_interval = true
         @intervals = 1
@@ -58,18 +59,24 @@ module Minimization
         0.upto(@intervals - 1) do |i|
           raise "first argument  should be lower than second at #{i+1}th interval" if lower[i] >= upper[i]
         end
-        @expected  = Array.new(@intervals)
-        @x_minimum = Array.new(@intervals)
-        @f_minimum = Array.new(@intervals)
+
+        @lower_array = lower
+        @upper_array = upper
+        upper = @upper_array[0]
+        lower = @lower_array[0]
+        @expected_array  = Array.new(@intervals)
+
         0.upto(@intervals - 1) do |i|
-          @expected[i] = lower[i] + golden * (upper[i] - lower[i])
+          @expected_array[i] = lower[i] + golden * (upper[i] - lower[i])
         end
       else
         raise "lower_bound, upper_bound dimension mismatch"
       end
+
       @lower=lower
       @upper=upper
       @proc=proc
+      @expected = @lower + golden * (@upper - @lower);
       @max_iteration=MAX_ITERATIONS
       @epsilon=EPSILON
       @iterations=0
@@ -83,7 +90,7 @@ module Minimization
     def log_summary
       @log.join("\n")
     end
-    # Convenience method to minimize
+    # Convenience method to 
     # == Parameters:
     # * <tt>lower</tt>: Lower possible value
     # * <tt>upper</tt>: Higher possible value
@@ -100,9 +107,14 @@ module Minimization
       minimizer
     end
     # Iterate to find the minimum
+    def iterate_local
+      raise "You should implement this"
+    end
+    
     def iterate
       raise "You should implement this"
     end
+
     def f(x)
       @proc.call(x)
     end
@@ -135,40 +147,10 @@ module Minimization
     def self.minimize(*args)
       raise "You should use #new and #iterate"
     end
-
-    def iterate
-      # try to solve with OpenCL supported methods
-      unless @single_interval
-        # convert the minimizing function proc into a string
-        minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
-        function_1d     = @proc_1d.to_source(:strip_enclosure => true).to_s
-        function_2d     = @proc_2d.to_source(:strip_enclosure => true).to_s
-        # call opencl supported golden section method
-        min = OpenCLMinimization::NewtonRampsonMinimizer.new(@intervals, @expected, minimizing_func, function_1d, function_2d)
-        min.max_iterations = @max_iteration
-        min.epsilon = @epsilon
-        min.minimize
-        # set results
-        @x_minimum = min.x_minimum
-        @f_minimum = min.f_minimum
-        #in case OpenCL method failed, move to pure ruby impementation
-        return if min.status == OpenCLMinimization::SUCCESSFULLY_FINISHED
-      end
-
-      0.upto(@intervals - 1) do |i|
-        iterate_local(i)
-      end
-    end
-
-    def iterate_local(i)
+    def iterate_local
       # First
-      if @single_interval
-        x_prev=@lower
-        x=@expected
-      else
-        x_prev=@lower[i]
-        x=@expected[i]
-      end
+      x_prev=@lower
+      x=@expected
       failed=true
       k=0
       while (x-x_prev).abs > @epsilon and k<@max_iteration
@@ -182,12 +164,22 @@ module Minimization
         @log << [k, x_min, x_max, f_min, f_max, (x_prev-x).abs, (f-f_prev).abs]
       end
       raise FailedIteration, "Not converged" if k>=@max_iteration
-      if(@single_interval)
-        @x_minimum = x;
-        @f_minimum = f(x);
+      @x_minimum = x;
+      @f_minimum = f(x);
+    end
+    def iterate
+      if @single_interval
+        iterate_local
       else
-        @x_minimum[i] = x;
-        @f_minimum[i] = f(x);
+        @x_minimum = Array.new(@intervals)
+        @f_minimum = Array.new(@intervals)
+        0.upto(@intervals - 1) do |i|
+          min=Minimization::NewtonRaphson.new(@lower_array[i], @upper_array[i], @proc, @proc_1d, @proc_2d)
+          min.iterate
+          @x_minimum[i] = min.x_minimum
+          @f_minimum[i] = min.f_minimum
+          @log << min.log
+        end
       end
     end
   end
@@ -204,47 +196,10 @@ module Minimization
   #  min.log
   class GoldenSection < Unidimensional
     # Start the iteration
-    def iterate
-
-      # try to solve with OpenCL supported methods
-      unless @single_interval
-        # convert the minimizing function proc into a string
-        minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
-        # call opencl supported golden section method
-        min = OpenCLMinimization::GoldenSectionMinimizer.new(@intervals, @lower, @expected, @upper, minimizing_func)
-        min.max_iterations = @max_iteration
-        min.epsilon = @epsilon
-        min.minimize
-        # set results
-        @x_minimum = min.x_minimum
-        @f_minimum = min.f_minimum
-        #in case OpenCL method failed, move to pure ruby impementation
-        return if min.status == OpenCLMinimization::SUCCESSFULLY_FINISHED
-      end
-
-      if @single_interval
-        iterate_local(-1)
-      else
-        lower = @lower
-        upper = @upper
-        expected = @expected
-
-        0.upto(@intervals - 1) do |i|
-          iterate_local(i)
-        end
-      end
-    end
-
-    def iterate_local(i)
-      if(@single_interval)
-        ax=@lower
-        bx=@expected
-        cx=@upper
-      else
-        ax=@lower[i]
-        bx=@expected[i]
-        cx=@upper[i]
-      end
+    def iterate_local
+      ax=@lower
+      bx=@expected
+      cx=@upper
       c = (3-Math::sqrt(5)).quo(2);
       r = 1-c;
 
@@ -284,23 +239,29 @@ module Minimization
       end
 
       if f1 < f2
-        if(@single_interval)
-          @x_minimum = x1;
-          @f_minimum = f1;
-        else
-          @x_minimum[i] = x1;
-          @f_minimum[i] = f1;
-        end
+        @x_minimum = x1;
+        @f_minimum = f1;
       else
-        if(@single_interval)
-          @x_minimum = x2;
-          @f_minimum = f2;
-        else
-          @x_minimum[i] = x2;
-          @f_minimum[i] = f2;
-        end
+        @x_minimum = x2;
+        @f_minimum = f2;
       end
       true
+    end
+
+    def iterate
+      if @single_interval
+        iterate_local
+      else
+        @x_minimum = Array.new(@intervals)
+        @f_minimum = Array.new(@intervals)
+        0.upto(@intervals - 1) do |i|
+          min=Minimization::GoldenSection.new(@lower_array[i], @upper_array[i], @proc)
+          min.iterate
+          @x_minimum[i] = min.x_minimum
+          @f_minimum[i] = min.f_minimum
+          @log << min.log
+        end
+      end
     end
 
   end
@@ -419,7 +380,7 @@ module Minimization
     end
     # Start the minimization process
     # If you want to control manually the process, use brent_iterate
-    def iterate
+    def iterate_local
       k=0
       bracketing if @do_bracketing
       while k<@max_iteration and (@x_lower-@x_upper).abs>@epsilon
@@ -427,7 +388,7 @@ module Minimization
         result=brent_iterate
         raise FailedIteration,"Error on iteration" if !result
         begin 
-          @log << [k, @x_lower, @_upper, @f_lower, @f_upper, (@x_lower-@x_upper).abs, (@f_lower-@f_upper).abs]
+          @log << [k, @x_lower, @x_upper, @f_lower, @f_upper, (@x_lower-@x_upper).abs, (@f_lower-@f_upper).abs]
         rescue =>@e
           @log << [k, @e.to_s,nil,nil,nil,nil,nil]
         end
@@ -544,6 +505,69 @@ module Minimization
       return false
 
     end
+    def iterate
+      if @single_interval
+        iterate_local
+      else
+        @x_minimum = Array.new(@intervals)
+        @f_minimum = Array.new(@intervals)
+        0.upto(@intervals - 1) do |i|
+          min=Minimization::Brent.new(@lower_array[i], @upper_array[i], @proc)
+          min.iterate
+          @x_minimum[i] = min.x_minimum
+          @f_minimum[i] = min.f_minimum
+          @log << min.log
+        end
+      end
+    end
   end
 end
 
+
+min=Minimization::GoldenSection.new(-1000, 2000, proc{|x| (x+1)**2} )
+min.expected=1.5  # Expected value
+min.iterate
+puts min.x_minimum.inspect
+min.f_minimum
+
+x = Minimization::GoldenSection.minimize(-1000, 1000) {|x|  (x - 3)**2 }
+puts x.x_minimum.inspect
+
+
+f   = lambda {|x| (x - 1)**2}
+fd  = lambda {|x| 2*(x - 1)}
+fdd = lambda {|x| 2}
+min = Minimization::NewtonRaphson.new(-1000,1000, f,fd,fdd)
+min.iterate
+puts min.x_minimum.inspect
+min.f_minimum
+
+#min = Minimization::NewtonRaphson.minimize(-1000,1000, f,fd,fdd)
+#puts min.x_minimum.inspect
+
+f = proc {|x| (x + 1)**2}
+min=Minimization::Brent.minimize(-1000,20000, &f)
+min.expected = 1.5  # Expected value
+min.iterate
+puts min.x_minimum.inspect
+
+#min=Minimization::Brent.minimize(-1000,20000, proc {|x| (x + 1)**2})
+#puts min.x_minimum.inspect
+
+puts "**********************************"
+min=Minimization::GoldenSection.new([-1000, -2000], [2000, 1000], proc{|x| (x+1)**2} )
+min.iterate
+puts min.x_minimum.inspect
+
+puts "**********************************"
+f   = lambda {|x| (x - 1)**2}
+fd  = lambda {|x| 2*(x - 1)}
+fdd = lambda {|x| 2}
+min = Minimization::NewtonRaphson.new([-1000, -2000], [2000, 1000], f,fd,fdd)
+min.iterate
+puts min.x_minimum.inspect
+
+puts "**********************************"
+min=Minimization::Brent.new([-1000, -2000], [2000, 1000], proc{|x| (x+1)**2} )
+min.iterate
+puts min.x_minimum.inspect
