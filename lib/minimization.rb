@@ -111,9 +111,43 @@ module Minimization
     def iterate_local
       raise "You should implement this"
     end
-    
-    def iterate
+
+    def create_opencl_minimizer
       raise "You should implement this"
+    end
+
+    def create_minimizer(i)
+      raise "You should implement this"
+    end
+
+    def iterate
+      if @single_interval
+        iterate_local
+      else
+        if @use_opencl
+          @x_minimum = Array.new(@intervals)
+          @f_minimum = Array.new(@intervals)
+          # convert the minimizing function proc into a string
+          minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
+          #min = OpenCLMinimization::BrentMinimizer.new(@intervals, @lower_array, @expected_array, @upper_array, minimizing_func)
+          min = create_opencl_minimizer
+          min.minimize
+          @x_minimum = min.x_minimum
+          @f_minimum = min.f_minimum
+          return if min.status == OpenCLMinimization::SUCCESSFULLY_FINISHED
+        end
+        puts "opencl failed" if min.status != OpenCLMinimization::SUCCESSFULLY_FINISHED
+        @x_minimum = Array.new(@intervals)
+        @f_minimum = Array.new(@intervals)
+        0.upto(@intervals - 1) do |i|
+          #min = Minimization::Brent.new(@lower_array[i], @upper_array[i], @proc)
+          min = create_minimizer(i)
+          min.iterate
+          @x_minimum[i] = min.x_minimum
+          @f_minimum[i] = min.f_minimum
+          @log << min.log
+        end
+      end
     end
 
     def f(x)
@@ -168,35 +202,18 @@ module Minimization
       @x_minimum = x;
       @f_minimum = f(x);
     end
-    def iterate
-      if @single_interval
-        iterate_local
-      else
-        if @use_opencl
-          @x_minimum = Array.new(@intervals)
-          @f_minimum = Array.new(@intervals)
-          # convert the minimizing function proc into a string
-          minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
-          function_1d     = @proc_1d.to_source(:strip_enclosure => true).to_s
-          function_2d     = @proc_2d.to_source(:strip_enclosure => true).to_s
-          min = OpenCLMinimization::NewtonRampsonMinimizer.new(@intervals, @expected_array, minimizing_func, function_1d, function_2d)
-          min.minimize
-          @x_minimum = min.x_minimum
-          @f_minimum = min.f_minimum
-          return if min.status == OpenCLMinimization::SUCCESSFULLY_FINISHED
-          puts "opencl failed" if min.status != OpenCLMinimization::SUCCESSFULLY_FINISHED
-        end
-        @x_minimum = Array.new(@intervals)
-        @f_minimum = Array.new(@intervals)
-        0.upto(@intervals - 1) do |i|
-          min=Minimization::NewtonRaphson.new(@lower_array[i], @upper_array[i], @proc, @proc_1d, @proc_2d)
-          min.iterate
-          @x_minimum[i] = min.x_minimum
-          @f_minimum[i] = min.f_minimum
-          @log << min.log
-        end
-      end
+
+    def create_opencl_minimizer
+      minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
+      function_1d     = @proc_1d.to_source(:strip_enclosure => true).to_s
+      function_2d     = @proc_2d.to_source(:strip_enclosure => true).to_s
+      return OpenCLMinimization::NewtonRampsonMinimizer.new(@intervals, @expected_array, minimizing_func, function_1d, function_2d)
     end
+
+    def create_minimizer(i)
+      return Minimization::NewtonRaphson.new(@lower_array[i], @upper_array[i], @proc, @proc_1d, @proc_2d)
+    end
+
   end
   # = Golden Section Minimizer.
   # Basic minimization algorithm. Slow, but robust.
@@ -263,32 +280,13 @@ module Minimization
       true
     end
 
-    def iterate
-      if @single_interval
-        iterate_local
-      else
-        if @use_opencl
-          @x_minimum = Array.new(@intervals)
-          @f_minimum = Array.new(@intervals)
-          # convert the minimizing function proc into a string
-          minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
-          min = OpenCLMinimization::GoldenSectionMinimizer.new(@intervals, @lower_array, @expected_array, @upper_array, minimizing_func)
-          min.minimize
-          @x_minimum = min.x_minimum
-          @f_minimum = min.f_minimum
-          return if min.status == OpenCLMinimization::SUCCESSFULLY_FINISHED
-          puts "opencl failed" if min.status != OpenCLMinimization::SUCCESSFULLY_FINISHED
-        end
-        @x_minimum = Array.new(@intervals)
-        @f_minimum = Array.new(@intervals)
-        0.upto(@intervals - 1) do |i|
-          min=Minimization::GoldenSection.new(@lower_array[i], @upper_array[i], @proc)
-          min.iterate
-          @x_minimum[i] = min.x_minimum
-          @f_minimum[i] = min.f_minimum
-          @log << min.log
-        end
-      end
+    def create_opencl_minimizer
+      minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
+      return OpenCLMinimization::GoldenSectionMinimizer.new(@intervals, @lower_array, @expected_array, @upper_array, minimizing_func)
+    end
+
+    def create_minimizer(i)
+      return Minimization::GoldenSection.new(@lower_array[i], @upper_array[i], @proc)
     end
 
   end
@@ -532,32 +530,15 @@ module Minimization
       return false
 
     end
-    def iterate
-      if @single_interval
-        iterate_local
-      else
-        if @use_opencl
-          @x_minimum = Array.new(@intervals)
-          @f_minimum = Array.new(@intervals)
-          # convert the minimizing function proc into a string
-          minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
-          min = OpenCLMinimization::BrentMinimizer.new(@intervals, @lower_array, @expected_array, @upper_array, minimizing_func)
-          min.minimize
-          @x_minimum = min.x_minimum
-          @f_minimum = min.f_minimum
-          return if min.status == OpenCLMinimization::SUCCESSFULLY_FINISHED
-        end
-        puts "opencl failed" if min.status != OpenCLMinimization::SUCCESSFULLY_FINISHED
-        @x_minimum = Array.new(@intervals)
-        @f_minimum = Array.new(@intervals)
-        0.upto(@intervals - 1) do |i|
-          min=Minimization::Brent.new(@lower_array[i], @upper_array[i], @proc)
-          min.iterate
-          @x_minimum[i] = min.x_minimum
-          @f_minimum[i] = min.f_minimum
-          @log << min.log
-        end
-      end
+
+    def create_opencl_minimizer
+      minimizing_func = @proc.to_source(:strip_enclosure => true).to_s
+      return OpenCLMinimization::BrentMinimizer.new(@intervals, @lower_array, @expected_array, @upper_array, minimizing_func)
     end
+
+    def create_minimizer(i)
+      return Minimization::Brent.new(@lower_array[i], @upper_array[i], @proc)
+    end
+
   end
 end
