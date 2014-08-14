@@ -143,9 +143,9 @@ module Minimization
           # create the OpenCL supported minimizer
           min = create_opencl_minimizer
           min.minimize
-          @x_minimum = min.x_minimum
-          @f_minimum = min.f_minimum
-          @opencl_status    = min.status
+          @x_minimum     = min.x_minimum
+          @f_minimum     = min.f_minimum
+          @opencl_status = min.status
           return if min.status == OpenCLMinimization::SUCCESSFULLY_FINISHED
         end
 
