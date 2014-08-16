@@ -5,15 +5,8 @@ require 'mkmf'
 find_executable('make')
 find_executable('gcc')
 
-# Create a dummy extension file. Without this RubyGems would abort the
-# installation process. On Linux this would result in the file "wat.so"
-# being created in the current working directory.
-#
-# Normally the generated Makefile would take care of this but since we
-# don't generate one we'll have to do this manually.
-#
-#FileUtils.touch(File.join(Dir.pwd, 'dummy.' + RbConfig::CONFIG['DLEXT']))
-#exec 'make'
+# Go to 'minimization/lib/opencl' directory and runs the makefile.
+# The shared library 'cl.so' will be created at 'minimization/lib/opencl'
 exec 'cd ../../lib/opencl/ ; make'
 
 # This is normally set by calling create_makefile() but we don't need that
