@@ -12,14 +12,22 @@ module OpenCLMinimization extend FFI::Library
   KERNEL_BUILD_FALURE         = -1
   RUNTIME_ERROR               = -2
   KERNEL_FILE_NOT_FOUND_ERROR = -3
+  LIB_NOT_FOUND_ERROR         = -4
 
   PATH_TO_KERNEL = File.expand_path(File.dirname(__FILE__))
-
-  ffi_lib "#{File.expand_path(File.dirname(__FILE__))}/cl.so"
-
-  # attack with the opencl_minimize of min_host.c
-  attach_function 'opencl_minimize', [:int, :pointer, :pointer, :pointer, :int, :string, :string,
-                                     :string, :pointer, :pointer, :int, :int, :float, :float, :float, :string, :pointer], :void
+  
+  begin
+    # check for availability of shared library.
+    File.open("#{File.expand_path(File.dirname(__FILE__))}/cl.so", "r")
+    ffi_lib "#{File.expand_path(File.dirname(__FILE__))}/cl.so"
+    # attack with the opencl_minimize of min_host.c
+    attach_function 'opencl_minimize', [:int, :pointer, :pointer, :pointer, :int, :string, :string,
+                                       :string, :pointer, :pointer, :int, :int, :float, :float, :float, :string, :pointer], :void
+  rescue
+    $lib_found = false
+  else
+    $lib_found = true
+  end
 
   # Classic GoldenSectionMinimizer minimization method.  
   # Basic minimization algorithm. Slow, but robust.
@@ -66,6 +74,12 @@ module OpenCLMinimization extend FFI::Library
     end
 
     def minimize
+      # terminate if the shared library not found
+      unless $lib_found
+        @status = LIB_NOT_FOUND_ERROR
+        return
+      end
+
       # create Buffers for inputs and outputs
       start_buffer    = FFI::Buffer.alloc_inout(:pointer, @n)
       expected_buffer = FFI::Buffer.alloc_inout(:pointer, @n)
@@ -137,6 +151,12 @@ module OpenCLMinimization extend FFI::Library
     end
 
     def minimize
+      # terminate if the shared library not found
+      unless $lib_found
+        @status = LIB_NOT_FOUND_ERROR
+        return
+      end
+
       # create Buffers for inputs and outputs
       expected_buffer = FFI::Buffer.alloc_inout(:pointer, @n)
       x_buffer        = FFI::Buffer.alloc_inout(:pointer, @n)
@@ -178,6 +198,12 @@ module OpenCLMinimization extend FFI::Library
   class BisectionMinimizer < GoldenSectionMinimizer
 
     def minimize
+      # terminate if the shared library not found
+      unless $lib_found
+        @status = LIB_NOT_FOUND_ERROR
+        return
+      end
+
       # create Buffers for inputs and outputs
       start_buffer    = FFI::Buffer.alloc_inout(:pointer, @n)
       expected_buffer = FFI::Buffer.alloc_inout(:pointer, @n)
@@ -250,6 +276,12 @@ module OpenCLMinimization extend FFI::Library
     end
 
     def minimize
+      # terminate if the shared library not found
+      unless $lib_found
+        @status = LIB_NOT_FOUND_ERROR
+        return
+      end
+
       # create Buffers for inputs and outputs
       start_buffer    = FFI::Buffer.alloc_inout(:pointer, @n)
       expected_buffer = FFI::Buffer.alloc_inout(:pointer, @n)
