@@ -24,7 +24,9 @@ require_relative 'multidim/conjugate_gradient'
 require_relative 'multidim/nelder_mead'
 require_relative 'multidim/point_value_pair'
 require_relative 'multidim/powell'
+require "#{File.expand_path(File.dirname(__FILE__))}/opencl/opencl_minimization.rb"
 
+require 'sourcify'
 require 'text-table'
 module Minimization
   VERSION="0.2.1"
@@ -49,19 +51,46 @@ module Minimization
     attr_reader :expected
     # Numbers of iterations
     attr_reader :iterations
+    attr_accessor :use_opencl
     # Create a new minimizer
     def initialize(lower, upper, proc)
-      raise "first argument  should be lower than second" if lower>=upper
+      golden = 0.3819660;
+
+      if(lower.class.to_s != 'Array' and upper.class.to_s != 'Array')
+        @single_interval = true
+        @intervals = 1
+        raise "first argument  should be lower than second" if lower >= upper
+        @expected = lower + golden * (upper - lower)
+      elsif(lower.class.to_s == 'Array' and upper.class.to_s == 'Array')
+        @single_interval = false
+        @intervals = lower.size
+        0.upto(@intervals - 1) do |i|
+          raise "first argument  should be lower than second at #{i+1}th interval" if lower[i] >= upper[i]
+        end
+
+        @lower_array = lower
+        @upper_array = upper
+        upper = @upper_array[0]
+        lower = @lower_array[0]
+        @expected_array  = Array.new(@intervals)
+
+        0.upto(@intervals - 1) do |i|
+          @expected_array[i] = lower[i] + golden * (upper[i] - lower[i])
+        end
+      else
+        raise "lower_bound, upper_bound dimension mismatch"
+      end
+
       @lower=lower
       @upper=upper
       @proc=proc
-      golden = 0.3819660;
       @expected = @lower + golden * (@upper - @lower);
       @max_iteration=MAX_ITERATIONS
       @epsilon=EPSILON
       @iterations=0
       @log=[]
       @log_header=%w{I xl xh f(xl) f(xh) dx df(x)}
+      @use_opencl = false
     end
     # Set expected value
     def expected=(v)
@@ -86,10 +115,63 @@ module Minimization
       raise FailedIteration unless minimizer.iterate
       minimizer
     end
-    # Iterate to find the minimum
-    def iterate
+    # Iterate to find the minimum - in single interval
+    def iterate_local
       raise "You should implement this"
     end
+
+    # create an instance of OpenCL supported minimizer class
+    def create_opencl_minimizer
+      raise "You should implement this"
+    end
+
+    # create an instance of minimizer class
+    def create_minimizer(i)
+      raise "You should implement this"
+    end
+
+    # returns a string in OpenCL C syntax from the given proc
+    def proc_to_source_string(proc)
+      return proc.to_source(:strip_enclosure => true).to_s
+    end
+
+    # Iterate to find the minimum
+    # If only one interval was given, use pure ruby implementataion or GSL, if exist
+    # If multiple intervals were given use pure ruby methods or OpenCL support
+    # In case OpenCL methods failed, this will switch to pure ruby methods
+    def iterate
+      if @single_interval
+        iterate_local
+      else
+        # use OpenCL support to solve subproblems
+        if @use_opencl
+          @x_minimum = Array.new(@intervals)
+          @f_minimum = Array.new(@intervals)
+          # create the OpenCL supported minimizer
+          min = create_opencl_minimizer
+          min.minimize
+          @x_minimum     = min.x_minimum
+          @f_minimum     = min.f_minimum
+          @opencl_status = min.status
+          return if min.status == OpenCLMinimization::SUCCESSFULLY_FINISHED
+        end
+
+        @log << "OpenCL supported method failed \n" if @opencl_status != OpenCLMinimization::SUCCESSFULLY_FINISHED
+
+        # if OpenCL method failed or OpenCL support hasn't been called, use pure ruby support
+        @x_minimum = Array.new(@intervals)
+        @f_minimum = Array.new(@intervals)
+        # for each interval, create new minimizer instance and solve them
+        0.upto(@intervals - 1) do |i|
+          min = create_minimizer(i)
+          min.iterate
+          @x_minimum[i] = min.x_minimum
+          @f_minimum[i] = min.f_minimum
+          @log << min.log
+        end
+      end
+    end
+
     def f(x)
       @proc.call(x)
     end
@@ -122,7 +204,7 @@ module Minimization
     def self.minimize(*args)
       raise "You should use #new and #iterate"
     end
-    def iterate
+    def iterate_local
       # First
       x_prev=@lower
       x=@expected
@@ -142,6 +224,20 @@ module Minimization
       @x_minimum = x;
       @f_minimum = f(x);
     end
+
+    # create an instance of OpenCL supported minimizer class 
+    def create_opencl_minimizer
+      minimizing_func = proc_to_source_string(@proc)
+      function_1d     = proc_to_source_string(@proc_1d)
+      function_2d     = proc_to_source_string(@proc_2d)
+      return OpenCLMinimization::NewtonRampsonMinimizer.new(@intervals, @expected_array, minimizing_func, function_1d, function_2d)
+    end
+
+    # create an instance of minimizer class
+    def create_minimizer(i)
+      return Minimization::NewtonRaphson.new(@lower_array[i], @upper_array[i], @proc, @proc_1d, @proc_2d)
+    end
+
   end
   # = Golden Section Minimizer.
   # Basic minimization algorithm. Slow, but robust.
@@ -156,7 +252,7 @@ module Minimization
   #  min.log
   class GoldenSection < Unidimensional
     # Start the iteration
-    def iterate
+    def iterate_local
       ax=@lower
       bx=@expected
       cx=@upper
@@ -206,6 +302,17 @@ module Minimization
         @f_minimum = f2;
       end
       true
+    end
+
+    # create an instance of OpenCL supported minimizer class 
+    def create_opencl_minimizer
+      minimizing_func = proc_to_source_string(@proc)
+      return OpenCLMinimization::GoldenSectionMinimizer.new(@intervals, @lower_array, @expected_array, @upper_array, minimizing_func)
+    end
+
+    # create an instance of minimizer class
+    def create_minimizer(i)
+      return Minimization::GoldenSection.new(@lower_array[i], @upper_array[i], @proc)
     end
 
   end
@@ -324,7 +431,7 @@ module Minimization
     end
     # Start the minimization process
     # If you want to control manually the process, use brent_iterate
-    def iterate
+    def iterate_local
       k=0
       bracketing if @do_bracketing
       while k<@max_iteration and (@x_lower-@x_upper).abs>@epsilon
@@ -449,5 +556,17 @@ module Minimization
       return false
 
     end
+
+    # create an instance of OpenCL supported minimizer class 
+    def create_opencl_minimizer
+      minimizing_func = proc_to_source_string(@proc)
+      return OpenCLMinimization::BrentMinimizer.new(@intervals, @lower_array, @expected_array, @upper_array, minimizing_func)
+    end
+
+    # create an instance of minimizer class
+    def create_minimizer(i)
+      return Minimization::Brent.new(@lower_array[i], @upper_array[i], @proc)
+    end
+
   end
 end

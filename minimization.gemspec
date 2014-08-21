@@ -11,8 +11,9 @@ Gem::Specification.new do |s|
   s.email = ["clbustos@gmail.com"]
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
+  s.extensions   = ["ext/minimization/extconf.rb"]
   s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
-  s.require_paths = ["lib", "lib/multidim"]
+  s.require_paths = ["lib", "lib/multidim", "lib/opencl"]
   #s.homepage = "http://ruby-statsample.rubyforge.org/""
   s.summary = "A suite for minimization in Ruby"
   s.add_runtime_dependency 'text-table', '~>1.2'
@@ -21,5 +22,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'bundler', '~>1.3'
   s.add_development_dependency 'rspec', '~>2.0'
   s.add_development_dependency 'rubyforge', '~>2.0'
+  s.add_development_dependency 'sourcify', '~>0.5.0'
+  s.add_development_dependency 'ffi', '~>1.0.7'
 end
 
