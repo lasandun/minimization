@@ -70,13 +70,13 @@ module Minimization
 
         @lower_array = lower
         @upper_array = upper
-        upper = @upper_array[0]
-        lower = @lower_array[0]
         @expected_array  = Array.new(@intervals)
 
         0.upto(@intervals - 1) do |i|
           @expected_array[i] = lower[i] + golden * (upper[i] - lower[i])
         end
+        upper = @upper_array[0]
+        lower = @lower_array[0]
       else
         raise "lower_bound, upper_bound dimension mismatch"
       end
