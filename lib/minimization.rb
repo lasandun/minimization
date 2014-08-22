@@ -358,8 +358,15 @@ module Minimization
     end
 
     def expected=(v)
-      @x_minimum=v
-      @f_minimum=f(v)
+      if @single_interval
+        @x_minimum=v
+        @f_minimum=f(v)
+      else
+        @x_minimum = v
+        0.upto(@intervals - 1) do |i|
+          @f_minimum = f(@x_minimum[i])
+        end
+      end
       @do_bracketing=false
     end
     
